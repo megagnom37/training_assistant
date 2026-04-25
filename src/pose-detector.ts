@@ -28,7 +28,7 @@ export class PoseDetector {
     return this.landmarker.detectForVideo(video, timestamp);
   }
 
-  private async createLandmarker(vision: FilesetResolver): Promise<PoseLandmarker> {
+  private async createLandmarker(vision: Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>): Promise<PoseLandmarker> {
     const options = (delegate: 'GPU' | 'CPU') => ({
       baseOptions: { modelAssetPath: MODEL_URL, delegate },
       runningMode: 'VIDEO' as const,
