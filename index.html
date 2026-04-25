@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="stylesheet" href="./styles/main.css" />
+  <title>Rep Counter</title>
+</head>
+<body>
+  <div id="app">
+    <div id="loading-screen">
+      <div class="loader-content">
+        <div class="spinner"></div>
+        <p id="loading-text">Loading pose model...</p>
+      </div>
+    </div>
+
+    <div id="camera-container" class="hidden">
+      <video id="camera-video" autoplay muted playsinline webkit-playsinline></video>
+      <canvas id="overlay-canvas"></canvas>
+
+      <div id="hud">
+        <div id="hud-top">
+          <span id="session-timer">00:00</span>
+          <span id="exercise-name">Squats</span>
+        </div>
+        <div id="rep-counter">
+          <span id="rep-count">0</span>
+        </div>
+        <div id="tempo-display">
+          <span id="tempo-down" class="tempo-phase">&#x25BC; --</span>
+          <span id="tempo-pause" class="tempo-phase">&#x23F8; --</span>
+          <span id="tempo-up" class="tempo-phase">&#x25B2; --</span>
+        </div>
+      </div>
+
+      <div id="gesture-indicator" class="hidden">
+        <svg viewBox="0 0 100 100">
+          <circle class="gesture-bg" cx="50" cy="50" r="45" />
+          <circle id="gesture-progress" class="gesture-fg" cx="50" cy="50" r="45" />
+        </svg>
+        <span>&#x270B;</span>
+      </div>
+
+      <div id="controls">
+        <button id="btn-start" type="button">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
