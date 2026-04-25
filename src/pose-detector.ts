@@ -17,17 +17,10 @@ export class PoseDetector {
     const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
 
     onProgress?.('Loading pose model…');
-    this.landmarker = await PoseLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: MODEL_URL,
-        delegate: 'GPU',
-      },
-      runningMode: 'VIDEO',
-      numPoses: 1,
-    });
+    this.landmarker = await this.createLandmarker(vision);
 
     onProgress?.('Warming up…');
-    await this.warmup();
+    this.warmup();
   }
 
   detect(video: HTMLVideoElement, timestamp: number): PoseLandmarkerResult | null {
@@ -35,7 +28,21 @@ export class PoseDetector {
     return this.landmarker.detectForVideo(video, timestamp);
   }
 
-  private async warmup(): Promise<void> {
+  private async createLandmarker(vision: FilesetResolver): Promise<PoseLandmarker> {
+    const options = (delegate: 'GPU' | 'CPU') => ({
+      baseOptions: { modelAssetPath: MODEL_URL, delegate },
+      runningMode: 'VIDEO' as const,
+      numPoses: 1,
+    });
+
+    try {
+      return await PoseLandmarker.createFromOptions(vision, options('GPU'));
+    } catch {
+      return await PoseLandmarker.createFromOptions(vision, options('CPU'));
+    }
+  }
+
+  private warmup(): void {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
@@ -43,21 +50,9 @@ export class PoseDetector {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, 64, 64);
 
-    const video = document.createElement('video');
-    video.muted = true;
-    video.playsInline = true;
-
-    const stream = canvas.captureStream(1);
-    video.srcObject = stream;
-    await video.play();
-
     for (let i = 0; i < 3; i++) {
-      this.landmarker?.detectForVideo(video, performance.now() + i);
+      this.landmarker?.detectForVideo(canvas, performance.now() + i);
     }
-
-    video.pause();
-    video.srcObject = null;
-    stream.getTracks().forEach((t) => t.stop());
   }
 
   destroy(): void {
