@@ -20,6 +20,53 @@
       </div>
     </div>
 
+    <div id="start-screen" class="hidden">
+      <div class="start-screen-inner">
+        <!-- Step 1: Exercise -->
+        <div id="step-exercise" class="step">
+          <h2 class="step-title">Упражнение</h2>
+          <div id="exercise-cards" class="card-grid"></div>
+        </div>
+
+        <!-- Step 2: Mode -->
+        <div id="step-mode" class="step hidden">
+          <h2 class="step-title">Режим</h2>
+          <div class="card-grid">
+            <button class="card" data-mode="free">
+              <span class="card-icon">&#x23F1;</span>
+              <span class="card-label">Свободный</span>
+            </button>
+            <button class="card" data-mode="challenge">
+              <span class="card-icon">&#x1F3AF;</span>
+              <span class="card-label">Челлендж</span>
+            </button>
+          </div>
+          <button id="btn-back-exercise" class="btn-back" type="button">&#x2190; Назад</button>
+        </div>
+
+        <!-- Step 3: Challenge config -->
+        <div id="step-challenge" class="step hidden">
+          <h2 class="step-title">Настройка челленджа</h2>
+          <div class="config-form">
+            <label class="config-field">
+              <span>Количество повторений</span>
+              <input id="input-reps" type="number" inputmode="numeric" min="1" max="999" value="20" />
+            </label>
+            <label class="config-field">
+              <span>Время (мин : сек)</span>
+              <div class="time-inputs">
+                <input id="input-min" type="number" inputmode="numeric" min="0" max="59" value="2" />
+                <span class="time-sep">:</span>
+                <input id="input-sec" type="number" inputmode="numeric" min="0" max="59" value="0" />
+              </div>
+            </label>
+          </div>
+          <button id="btn-go" class="btn-go" type="button">Старт</button>
+          <button id="btn-back-mode" class="btn-back" type="button">&#x2190; Назад</button>
+        </div>
+      </div>
+    </div>
+
     <div id="camera-container" class="hidden">
       <video id="camera-video" autoplay muted playsinline webkit-playsinline></video>
       <canvas id="overlay-canvas"></canvas>
@@ -29,13 +76,39 @@
           <span id="session-timer">00:00</span>
           <span id="exercise-name">Squats</span>
         </div>
-        <div id="rep-counter">
-          <span id="rep-count">0</span>
+
+        <!-- Free mode HUD -->
+        <div id="hud-free">
+          <div id="rep-counter">
+            <span id="rep-count">0</span>
+          </div>
+          <div id="tempo-display">
+            <span id="tempo-down" class="tempo-phase">&#x25BC; --</span>
+            <span id="tempo-pause" class="tempo-phase">&#x23F8; --</span>
+            <span id="tempo-up" class="tempo-phase">&#x25B2; --</span>
+          </div>
         </div>
-        <div id="tempo-display">
-          <span id="tempo-down" class="tempo-phase">&#x25BC; --</span>
-          <span id="tempo-pause" class="tempo-phase">&#x23F8; --</span>
-          <span id="tempo-up" class="tempo-phase">&#x25B2; --</span>
+
+        <!-- Challenge mode HUD -->
+        <div id="hud-challenge" class="hidden">
+          <div id="challenge-center">
+            <div id="challenge-timer">02:00</div>
+            <div id="challenge-reps-remaining">20</div>
+            <span id="challenge-reps-label">осталось</span>
+          </div>
+          <div id="challenge-tempo-bar">
+            <div id="pace-indicator"></div>
+            <div class="tempo-col">
+              <span class="tempo-label">Цель</span>
+              <span id="target-tempo">0</span>
+              <span class="tempo-unit">повт/мин</span>
+            </div>
+            <div class="tempo-col">
+              <span class="tempo-label">Сейчас</span>
+              <span id="current-tempo">0</span>
+              <span class="tempo-unit">повт/мин</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -50,6 +123,8 @@
       <div id="controls">
         <button id="btn-start" type="button">Start</button>
       </div>
+
+      <button id="btn-back-start" class="btn-back-cam" type="button">&#x2190;</button>
     </div>
   </div>
 

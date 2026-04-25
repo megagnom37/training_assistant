@@ -4,16 +4,23 @@ import { AngleCalculator } from './angle-calculator';
 import { ExerciseStateMachine } from './state-machine';
 import { TempoTracker } from './tempo-tracker';
 import { GestureDetector } from './gesture-detector';
+import { ChallengeTracker } from './challenge-tracker';
 import { Overlay } from './ui/overlay';
 import { HUD } from './ui/hud';
 import { Controls } from './ui/controls';
-import { SQUAT } from './exercises/squat';
-
-const exercise = SQUAT;
+import { StartScreen, type WorkoutConfig } from './ui/start-screen';
 
 let running = false;
 let sessionActive = false;
 let frameCounter = 0;
+
+let config: WorkoutConfig | null = null;
+let angleCalc: AngleCalculator;
+let stateMachine: ExerciseStateMachine;
+let tempo: TempoTracker;
+let challenge: ChallengeTracker | null = null;
+let lastChallengeUpdate = 0;
+let prevRepCount = 0;
 
 const loadingScreen = document.getElementById('loading-screen')!;
 const loadingText = document.getElementById('loading-text')!;
@@ -28,48 +35,63 @@ const canvasEl = document.getElementById('overlay-canvas') as HTMLCanvasElement;
 
 const camera = new Camera(videoEl);
 const detector = new PoseDetector();
-const angleCalc = new AngleCalculator(exercise);
-const stateMachine = new ExerciseStateMachine(exercise);
-const tempo = new TempoTracker(exercise);
 const gesture = new GestureDetector(1500);
 const overlay = new Overlay(canvasEl);
 const hud = new HUD();
 const controls = new Controls();
-
-stateMachine.onChange((event) => {
-  tempo.onStateChange(event);
-});
+const startScreen = new StartScreen();
 
 controls.onSessionToggle = (active) => {
-  if (active) {
-    startSession();
-  } else {
-    stopSession();
-  }
+  if (active) startSession();
+  else stopSession();
 };
+
+document.getElementById('btn-back-start')!.addEventListener('click', () => {
+  goToStartScreen();
+});
 
 function startSession(): void {
   sessionActive = true;
   stateMachine.reset();
   angleCalc.reset();
   tempo.reset();
-  hud.reset();
-  hud.startTimer();
+  prevRepCount = 0;
+
+  if (config?.mode === 'free') {
+    hud.updateRepCount(0);
+    hud.updateTempo(null);
+    hud.startTimer();
+  }
+
+  if (config?.mode === 'challenge' && config.targetReps && config.targetTimeSeconds) {
+    challenge = new ChallengeTracker(config.targetReps, config.targetTimeSeconds);
+    challenge.start();
+    lastChallengeUpdate = 0;
+    hud.updateChallenge({
+      remainingReps: config.targetReps,
+      remainingSeconds: config.targetTimeSeconds,
+      targetTempo: Math.round(config.targetReps / (config.targetTimeSeconds / 60) * 10) / 10,
+      currentTempo: 0,
+      paceStatus: 'idle',
+      completed: false,
+      succeeded: false,
+    });
+  }
 }
 
 function stopSession(): void {
   sessionActive = false;
   hud.stopTimer();
   gesture.reset();
+  challenge = null;
 }
 
 function processFrame(): void {
   if (!running) return;
-
   requestAnimationFrame(processFrame);
+
   frameCounter++;
   if (frameCounter % 2 !== 0) return;
-
   if (!camera.ready) return;
 
   const timestamp = performance.now();
@@ -85,10 +107,7 @@ function processFrame(): void {
 
   const gestureTriggered = gesture.update(landmarks, timestamp);
   updateGestureUI();
-
-  if (gestureTriggered) {
-    controls.toggle();
-  }
+  if (gestureTriggered) controls.toggle();
 
   if (!sessionActive) return;
 
@@ -96,8 +115,32 @@ function processFrame(): void {
   if (!angles) return;
 
   stateMachine.update(angles, timestamp);
-  hud.updateRepCount(stateMachine.count);
-  hud.updateTempo(tempo.lastTempo);
+  const currentCount = stateMachine.count;
+
+  if (config?.mode === 'free') {
+    hud.updateRepCount(currentCount);
+    hud.updateTempo(tempo.lastTempo);
+  }
+
+  if (config?.mode === 'challenge' && challenge) {
+    if (currentCount > prevRepCount) {
+      for (let i = 0; i < currentCount - prevRepCount; i++) {
+        challenge.recordRep();
+      }
+    }
+    prevRepCount = currentCount;
+
+    if (timestamp - lastChallengeUpdate > 500) {
+      lastChallengeUpdate = timestamp;
+      const state = challenge.getState();
+      hud.updateChallenge(state);
+
+      if (state.completed) {
+        controls.setActive(false);
+        stopSession();
+      }
+    }
+  }
 }
 
 function updateGestureUI(): void {
@@ -105,11 +148,68 @@ function updateGestureUI(): void {
   if (p > 0) {
     gestureIndicatorEl.classList.remove('hidden');
     const circumference = 2 * Math.PI * 45;
-    gestureProgressEl.style.strokeDashoffset = String(
-      circumference * (1 - p)
-    );
+    gestureProgressEl.style.strokeDashoffset = String(circumference * (1 - p));
   } else {
     gestureIndicatorEl.classList.add('hidden');
+  }
+}
+
+function initExercise(cfg: WorkoutConfig): void {
+  config = cfg;
+  angleCalc = new AngleCalculator(cfg.exercise);
+  stateMachine = new ExerciseStateMachine(cfg.exercise);
+  tempo = new TempoTracker(cfg.exercise);
+  challenge = null;
+
+  stateMachine.onChange((event) => tempo.onStateChange(event));
+
+  hud.reset();
+  hud.setExerciseName(cfg.exercise.name);
+  hud.setMode(cfg.mode);
+
+  if (cfg.mode === 'challenge' && cfg.targetReps && cfg.targetTimeSeconds) {
+    hud.updateChallenge({
+      remainingReps: cfg.targetReps,
+      remainingSeconds: cfg.targetTimeSeconds,
+      targetTempo: Math.round(cfg.targetReps / (cfg.targetTimeSeconds / 60) * 10) / 10,
+      currentTempo: 0,
+      paceStatus: 'idle',
+      completed: false,
+      succeeded: false,
+    });
+  }
+}
+
+async function goToStartScreen(): Promise<void> {
+  running = false;
+  sessionActive = false;
+  challenge = null;
+  hud.stopTimer();
+  camera.stop();
+  cameraContainer.classList.add('hidden');
+  controls.setActive(false);
+
+  const cfg = await startScreen.show();
+  await launchCamera(cfg);
+}
+
+async function launchCamera(cfg: WorkoutConfig): Promise<void> {
+  initExercise(cfg);
+  loadingScreen.classList.remove('hidden');
+  loadingText.textContent = 'Starting camera…';
+
+  try {
+    await camera.start();
+    overlay.resize();
+    loadingScreen.classList.add('hidden');
+    cameraContainer.classList.remove('hidden');
+    running = true;
+    frameCounter = 0;
+    processFrame();
+  } catch (err) {
+    console.error('Camera failed:', err);
+    loadingText.textContent =
+      err instanceof Error ? err.message : 'Failed to start. Check camera permissions.';
   }
 }
 
@@ -119,19 +219,12 @@ async function init(): Promise<void> {
       loadingText.textContent = msg;
     });
 
-    loadingText.textContent = 'Starting camera…';
-    await camera.start();
-
-    overlay.resize();
-    window.addEventListener('resize', () => overlay.resize());
-
-    hud.setExerciseName(exercise.name);
-
     loadingScreen.classList.add('hidden');
-    cameraContainer.classList.remove('hidden');
 
-    running = true;
-    processFrame();
+    const cfg = await startScreen.show();
+    await launchCamera(cfg);
+
+    window.addEventListener('resize', () => overlay.resize());
   } catch (err) {
     console.error('Init failed:', err);
     loadingText.textContent =

@@ -3,6 +3,8 @@ import type { ExerciseDefinition } from './exercises/types';
 import { calculateAngle } from './utils/math';
 import { OneEuroFilter } from './utils/one-euro-filter';
 
+const SYMMETRY_THRESHOLD = 35;
+
 export class AngleCalculator {
   private filters = new Map<string, OneEuroFilter>();
   private exercise: ExerciseDefinition;
@@ -29,10 +31,13 @@ export class AngleCalculator {
 
       const leftAngle = this.computeTriple(landmarks, pair.left);
       const rightAngle = this.computeTriple(landmarks, pair.right);
-      const avg = (leftAngle + rightAngle) / 2;
+      const symmetric = Math.abs(leftAngle - rightAngle) < SYMMETRY_THRESHOLD;
+      const value = symmetric
+        ? (leftAngle + rightAngle) / 2
+        : Math.max(leftAngle, rightAngle);
 
       const filter = this.filters.get(def.id)!;
-      result.set(def.id, filter.filter(t, avg));
+      result.set(def.id, filter.filter(t, value));
     }
 
     return result;

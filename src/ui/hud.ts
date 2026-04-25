@@ -1,4 +1,6 @@
 import type { RepTempo } from '../tempo-tracker';
+import type { WorkoutMode } from './start-screen';
+import type { PaceStatus, ChallengeState } from '../challenge-tracker';
 
 export class HUD {
   private repCountEl: HTMLElement;
@@ -7,6 +9,14 @@ export class HUD {
   private tempoPauseEl: HTMLElement;
   private tempoUpEl: HTMLElement;
   private exerciseNameEl: HTMLElement;
+
+  private hudFree: HTMLElement;
+  private hudChallenge: HTMLElement;
+  private challengeTimerEl: HTMLElement;
+  private challengeRepsEl: HTMLElement;
+  private targetTempoEl: HTMLElement;
+  private currentTempoEl: HTMLElement;
+  private paceIndicatorEl: HTMLElement;
 
   private sessionStart = 0;
   private timerHandle = 0;
@@ -18,6 +28,19 @@ export class HUD {
     this.tempoPauseEl = document.getElementById('tempo-pause')!;
     this.tempoUpEl = document.getElementById('tempo-up')!;
     this.exerciseNameEl = document.getElementById('exercise-name')!;
+
+    this.hudFree = document.getElementById('hud-free')!;
+    this.hudChallenge = document.getElementById('hud-challenge')!;
+    this.challengeTimerEl = document.getElementById('challenge-timer')!;
+    this.challengeRepsEl = document.getElementById('challenge-reps-remaining')!;
+    this.targetTempoEl = document.getElementById('target-tempo')!;
+    this.currentTempoEl = document.getElementById('current-tempo')!;
+    this.paceIndicatorEl = document.getElementById('pace-indicator')!;
+  }
+
+  setMode(mode: WorkoutMode): void {
+    this.hudFree.classList.toggle('hidden', mode !== 'free');
+    this.hudChallenge.classList.toggle('hidden', mode !== 'challenge');
   }
 
   setExerciseName(name: string): void {
@@ -44,6 +67,17 @@ export class HUD {
     this.tempoUpEl.textContent = `\u25B2 ${tempo.concentric.toFixed(1)}s`;
   }
 
+  updateChallenge(state: ChallengeState): void {
+    const min = Math.floor(state.remainingSeconds / 60);
+    const sec = state.remainingSeconds % 60;
+    this.challengeTimerEl.textContent =
+      `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    this.challengeRepsEl.textContent = String(state.remainingReps);
+    this.targetTempoEl.textContent = String(state.targetTempo);
+    this.currentTempoEl.textContent = String(state.currentTempo);
+    this.setPaceStatus(state.paceStatus);
+  }
+
   startTimer(): void {
     this.sessionStart = performance.now();
     this.timerHandle = window.setInterval(() => {
@@ -64,5 +98,17 @@ export class HUD {
     this.repCountEl.textContent = '0';
     this.timerEl.textContent = '00:00';
     this.updateTempo(null);
+    this.challengeTimerEl.textContent = '00:00';
+    this.challengeRepsEl.textContent = '0';
+    this.targetTempoEl.textContent = '0';
+    this.currentTempoEl.textContent = '0';
+    this.setPaceStatus('idle');
+  }
+
+  private setPaceStatus(status: PaceStatus): void {
+    this.paceIndicatorEl.classList.remove('on-pace', 'behind');
+    if (status !== 'idle') {
+      this.paceIndicatorEl.classList.add(status);
+    }
   }
 }
