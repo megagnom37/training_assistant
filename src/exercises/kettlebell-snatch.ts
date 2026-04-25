@@ -27,11 +27,11 @@ export const KETTLEBELL_SNATCH: ExerciseDefinition = {
   initialState: 'LOW',
   transitions: [
     { from: 'LOW',        to: 'RISING',     condition: { angleId: 'shoulder', operator: '>',  value: 90  } },
-    { from: 'RISING',     to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 140 } },
+    { from: 'RISING',     to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 155 } },
     { from: 'RISING',     to: 'LOW',        condition: { angleId: 'shoulder', operator: '<',  value: 70  } },
-    { from: 'LOCKOUT',    to: 'DESCENDING', condition: { angleId: 'shoulder', operator: '<',  value: 120 } },
+    { from: 'LOCKOUT',    to: 'DESCENDING', condition: { angleId: 'shoulder', operator: '<',  value: 135 } },
     { from: 'DESCENDING', to: 'LOW',        condition: { angleId: 'shoulder', operator: '<',  value: 90  } },
-    { from: 'DESCENDING', to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 140 } },
+    { from: 'DESCENDING', to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 155 } },
   ],
   incrementOn: { from: 'RISING', to: 'LOCKOUT' },
   tempoPhases: [
