@@ -13,6 +13,7 @@ export interface WorkoutConfig {
 const EXERCISE_ICONS: Record<string, string> = {
   squat: '\u{1F9CE}',
   'push-up': '\u{1F4AA}',
+  'kettlebell-snatch': '\u{1F3CB}',
 };
 
 export class StartScreen {

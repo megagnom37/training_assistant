@@ -9,6 +9,7 @@ import { Overlay } from './ui/overlay';
 import { HUD } from './ui/hud';
 import { Controls } from './ui/controls';
 import { StartScreen, type WorkoutConfig } from './ui/start-screen';
+import { ResultScreen } from './ui/result-screen';
 
 let running = false;
 let sessionActive = false;
@@ -40,11 +41,14 @@ const overlay = new Overlay(canvasEl);
 const hud = new HUD();
 const controls = new Controls();
 const startScreen = new StartScreen();
+const resultScreen = new ResultScreen();
 
 controls.onSessionToggle = (active) => {
   if (active) startSession();
   else stopSession();
 };
+
+resultScreen.onBack = () => goToStartScreen();
 
 document.getElementById('btn-back-start')!.addEventListener('click', () => {
   goToStartScreen();
@@ -79,10 +83,15 @@ function startSession(): void {
   }
 }
 
-function stopSession(): void {
+function stopSession(showResult = true): void {
   sessionActive = false;
   hud.stopTimer();
   gesture.reset();
+
+  if (challenge && showResult) {
+    if (!challenge.done) challenge.cancel();
+    resultScreen.show(challenge.getResult());
+  }
   challenge = null;
 }
 
@@ -137,7 +146,11 @@ function processFrame(): void {
 
       if (state.completed) {
         controls.setActive(false);
-        stopSession();
+        resultScreen.show(challenge!.getResult());
+        sessionActive = false;
+        hud.stopTimer();
+        gesture.reset();
+        challenge = null;
       }
     }
   }
@@ -187,6 +200,7 @@ async function goToStartScreen(): Promise<void> {
   hud.stopTimer();
   camera.stop();
   cameraContainer.classList.add('hidden');
+  resultScreen.hide();
   controls.setActive(false);
 
   const cfg = await startScreen.show();

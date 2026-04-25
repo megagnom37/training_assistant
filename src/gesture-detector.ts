@@ -64,6 +64,6 @@ export class GestureDetector {
     const rightUp =
       (rw.visibility ?? 0) > 0.5 && rw.y < nose.y - 0.05;
 
-    return leftUp || rightUp;
+    return leftUp && rightUp;
   }
 }

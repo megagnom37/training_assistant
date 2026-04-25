@@ -1,4 +1,5 @@
 export type PaceStatus = 'on-pace' | 'behind' | 'idle';
+export type ChallengeStatus = 'success' | 'failed' | 'cancelled';
 
 export interface ChallengeState {
   remainingReps: number;
@@ -10,6 +11,16 @@ export interface ChallengeState {
   succeeded: boolean;
 }
 
+export interface ChallengeResult {
+  status: ChallengeStatus;
+  targetReps: number;
+  actualReps: number;
+  targetTimeSeconds: number;
+  elapsedSeconds: number;
+  targetTempo: number;
+  averageTempo: number;
+}
+
 export class ChallengeTracker {
   private targetReps: number;
   private targetTimeMs: number;
@@ -19,6 +30,8 @@ export class ChallengeTracker {
   private startTime = 0;
   private _done = false;
   private _succeeded = false;
+  private _cancelled = false;
+  private _endTime = 0;
 
   constructor(targetReps: number, targetTimeSeconds: number) {
     this.targetReps = targetReps;
@@ -31,6 +44,8 @@ export class ChallengeTracker {
     this.repTimestamps = [];
     this._done = false;
     this._succeeded = false;
+    this._cancelled = false;
+    this._endTime = 0;
   }
 
   recordRep(): void {
@@ -39,7 +54,15 @@ export class ChallengeTracker {
     if (this.repTimestamps.length >= this.targetReps) {
       this._done = true;
       this._succeeded = true;
+      this._endTime = performance.now();
     }
+  }
+
+  cancel(): void {
+    if (this._done) return;
+    this._done = true;
+    this._cancelled = true;
+    this._endTime = performance.now();
   }
 
   getState(): ChallengeState {
@@ -51,6 +74,7 @@ export class ChallengeTracker {
     if (remainingMs <= 0 && !this._done) {
       this._done = true;
       this._succeeded = remainingReps <= 0;
+      this._endTime = now;
     }
 
     const currentTempo = this.computeCurrentTempo(now);
@@ -66,6 +90,35 @@ export class ChallengeTracker {
       paceStatus,
       completed: this._done,
       succeeded: this._succeeded,
+    };
+  }
+
+  getResult(): ChallengeResult {
+    const endTime = this._endTime || performance.now();
+    const elapsedMs = endTime - this.startTime;
+    const elapsedSeconds = elapsedMs / 1000;
+    const actualReps = this.repTimestamps.length;
+    const averageTempo = elapsedSeconds > 0
+      ? actualReps / (elapsedSeconds / 60)
+      : 0;
+
+    let status: ChallengeStatus;
+    if (this._cancelled) {
+      status = 'cancelled';
+    } else if (this._succeeded) {
+      status = 'success';
+    } else {
+      status = 'failed';
+    }
+
+    return {
+      status,
+      targetReps: this.targetReps,
+      actualReps,
+      targetTimeSeconds: this.targetTimeMs / 1000,
+      elapsedSeconds: Math.round(elapsedSeconds * 10) / 10,
+      targetTempo: Math.round(this.targetTempo * 10) / 10,
+      averageTempo: Math.round(averageTempo * 10) / 10,
     };
   }
 

@@ -41,6 +41,7 @@ export class HUD {
   setMode(mode: WorkoutMode): void {
     this.hudFree.classList.toggle('hidden', mode !== 'free');
     this.hudChallenge.classList.toggle('hidden', mode !== 'challenge');
+    this.timerEl.classList.toggle('hidden', mode !== 'free');
   }
 
   setExerciseName(name: string): void {

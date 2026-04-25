@@ -126,6 +126,32 @@
 
       <button id="btn-back-start" class="btn-back-cam" type="button">&#x2190;</button>
     </div>
+
+    <div id="result-screen" class="hidden">
+      <div class="result-inner">
+        <div id="result-status-icon"></div>
+        <div id="result-status-text"></div>
+        <div class="result-stats">
+          <div class="result-row">
+            <span class="result-label">Повторения</span>
+            <span id="result-reps" class="result-value"></span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Время</span>
+            <span id="result-time" class="result-value"></span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Средний темп</span>
+            <span id="result-avg-tempo" class="result-value"></span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Целевой темп</span>
+            <span id="result-target-tempo" class="result-value"></span>
+          </div>
+        </div>
+        <button id="btn-result-back" class="btn-go" type="button">Назад</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="./src/main.ts"></script>
