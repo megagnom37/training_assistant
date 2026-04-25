@@ -23,20 +23,26 @@ export const KETTLEBELL_SNATCH: ExerciseDefinition = {
   bilateralPairs: [
     { left: [23, 11, 15], right: [24, 12, 16] },
   ],
-  states: ['LOW', 'RISING', 'LOCKOUT', 'DESCENDING'],
-  initialState: 'LOW',
+  states: ['BOTTOM', 'RISING', 'LOCKOUT', 'DESCENDING'],
+  initialState: 'BOTTOM',
   transitions: [
-    { from: 'LOW',        to: 'RISING',     condition: { angleId: 'shoulder', operator: '>',  value: 90  } },
-    { from: 'RISING',     to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 155 } },
-    { from: 'RISING',     to: 'LOW',        condition: { angleId: 'shoulder', operator: '<',  value: 70  } },
-    { from: 'LOCKOUT',    to: 'DESCENDING', condition: { angleId: 'shoulder', operator: '<',  value: 135 } },
-    { from: 'DESCENDING', to: 'LOW',        condition: { angleId: 'shoulder', operator: '<',  value: 90  } },
-    { from: 'DESCENDING', to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 155 } },
+    // Arm must come up from below waist before we start tracking the pull
+    { from: 'BOTTOM',     to: 'RISING',     condition: { angleId: 'shoulder', operator: '>',  value: 70  } },
+    // Full lockout: arm straight overhead, wrist well above head
+    { from: 'RISING',     to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 165 } },
+    // Failed attempt — arm dropped back down between legs
+    { from: 'RISING',     to: 'BOTTOM',     condition: { angleId: 'shoulder', operator: '<',  value: 50  } },
+    // Arm leaving overhead position
+    { from: 'LOCKOUT',    to: 'DESCENDING', condition: { angleId: 'shoulder', operator: '<',  value: 150 } },
+    // Arm returned between legs below waist — ready for next rep
+    { from: 'DESCENDING', to: 'BOTTOM',     condition: { angleId: 'shoulder', operator: '<',  value: 50  } },
+    // Quick re-lockout without full descent
+    { from: 'DESCENDING', to: 'LOCKOUT',    condition: { angleId: 'shoulder', operator: '>=', value: 165 } },
   ],
   incrementOn: { from: 'RISING', to: 'LOCKOUT' },
   tempoPhases: [
-    { name: 'eccentric',  from: 'DESCENDING', to: 'LOW' },
-    { name: 'pause',      from: 'LOW',        to: 'RISING' },
+    { name: 'eccentric',  from: 'DESCENDING', to: 'BOTTOM' },
+    { name: 'pause',      from: 'BOTTOM',     to: 'RISING' },
     { name: 'concentric', from: 'RISING',     to: 'LOCKOUT' },
   ],
   minVisibility: 0.5,
