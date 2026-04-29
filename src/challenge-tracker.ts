@@ -1,3 +1,5 @@
+import { computeRollingRpm } from './rolling-rpm';
+
 export type PaceStatus = 'on-pace' | 'behind' | 'idle';
 export type ChallengeStatus = 'success' | 'failed' | 'cancelled';
 
@@ -126,19 +128,7 @@ export class ChallengeTracker {
   }
 
   private computeCurrentTempo(now: number): number {
-    if (this.repTimestamps.length === 0) return 0;
-
-    const windowMs = Math.min(60_000, now - this.startTime);
-    if (windowMs <= 0) return 0;
-
-    const windowStart = now - windowMs;
-    let count = 0;
-    for (let i = this.repTimestamps.length - 1; i >= 0; i--) {
-      if (this.repTimestamps[i] >= windowStart) count++;
-      else break;
-    }
-
-    return count * (60_000 / windowMs);
+    return computeRollingRpm(this.repTimestamps, this.startTime, now);
   }
 
   private computeDynamicTargetTempo(remainingReps: number, remainingMs: number): number {

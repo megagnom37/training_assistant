@@ -1,4 +1,3 @@
-import type { RepTempo } from '../tempo-tracker';
 import type { WorkoutMode } from './start-screen';
 import type { PaceStatus, ChallengeState } from '../challenge-tracker';
 
@@ -55,12 +54,14 @@ export class HUD {
     }
   }
 
-  updateTempo(tempo: RepTempo | null): void {
-    if (!tempo || tempo.total <= 0) {
+  /**
+   * Free mode: rolling RPM (challenge-style sliding window). Pass null until first rep timestamp exists.
+   */
+  updateRollingRpmFree(rpm: number | null): void {
+    if (rpm === null || !Number.isFinite(rpm)) {
       this.paceEl.textContent = '-- RPM';
       return;
     }
-    const rpm = 60 / tempo.total;
     const rounded = rpm >= 100 ? Math.round(rpm) : Math.round(rpm * 10) / 10;
     this.paceEl.textContent = `${rounded} RPM`;
   }
@@ -95,7 +96,7 @@ export class HUD {
     this.stopTimer();
     this.repCountEl.textContent = '0';
     this.timerEl.textContent = '00:00';
-    this.updateTempo(null);
+    this.updateRollingRpmFree(null);
     this.challengeTimerEl.textContent = '00:00';
     this.challengeRepsEl.textContent = '0';
     this.targetTempoEl.textContent = '0';

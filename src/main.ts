@@ -10,6 +10,7 @@ import { HUD } from './ui/hud';
 import { Controls } from './ui/controls';
 import { StartScreen, type WorkoutConfig } from './ui/start-screen';
 import { ResultScreen, type PaceSample } from './ui/result-screen';
+import { computeRollingRpm } from './rolling-rpm';
 
 let running = false;
 let sessionActive = false;
@@ -22,6 +23,8 @@ let tempo: TempoTracker;
 let challenge: ChallengeTracker | null = null;
 let prevRepCount = 0;
 let freeSessionStart = 0;
+/** Rep completion timestamps (challenge-style rolling tempo window). */
+let freeRepTimestamps: number[] = [];
 let freePaceSamples: PaceSample[] = [];
 let freePaceHandle = 0;
 let challengeCountdownHandle = 0;
@@ -81,10 +84,11 @@ function startSession(): void {
 
   if (config?.mode === 'free') {
     freeSessionStart = performance.now();
+    freeRepTimestamps = [];
     freePaceSamples = [];
     startFreePaceSampling();
     hud.updateRepCount(0);
-    hud.updateTempo(null);
+    hud.updateRollingRpmFree(null);
     hud.startTimer();
   }
 
@@ -145,7 +149,7 @@ function stopSession(showResult = true): void {
   if (config?.mode === 'free' && showResult) {
     const reps = stateMachine.count;
     const elapsedSeconds = freeSessionStart > 0 ? Math.max(0, Math.floor((performance.now() - freeSessionStart) / 1000)) : 0;
-    recordFreePaceSample(performance.now(), reps);
+    recordFreePaceSample(performance.now());
 
     const tempos = tempo.allTempos;
     const avgTempo = tempo.averageTempo;
@@ -272,18 +276,24 @@ function processFrame(): void {
   stateMachine.update(angles, timestamp);
   const currentCount = stateMachine.count;
 
+  if (currentCount > prevRepCount) {
+    const delta = currentCount - prevRepCount;
+    if (config?.mode === 'free') {
+      for (let i = 0; i < delta; i++) freeRepTimestamps.push(timestamp);
+    }
+    if (config?.mode === 'challenge' && challenge) {
+      for (let i = 0; i < delta; i++) challenge.recordRep();
+    }
+  }
+  prevRepCount = currentCount;
+
   if (config?.mode === 'free') {
     hud.updateRepCount(currentCount);
-    hud.updateTempo(tempo.lastTempo);
-  }
-
-  if (config?.mode === 'challenge' && challenge) {
-    if (currentCount > prevRepCount) {
-      for (let i = 0; i < currentCount - prevRepCount; i++) {
-        challenge.recordRep();
-      }
-    }
-    prevRepCount = currentCount;
+    const rpmDisp =
+      freeRepTimestamps.length === 0
+        ? null
+        : computeRollingRpm(freeRepTimestamps, freeSessionStart, timestamp);
+    hud.updateRollingRpmFree(rpmDisp);
   }
 }
 
@@ -340,6 +350,7 @@ async function goToStartScreen(): Promise<void> {
   sessionActive = false;
   challenge = null;
   freeSessionStart = 0;
+  freeRepTimestamps = [];
   stopFreePaceSampling();
   if (challengeCountdownHandle) {
     window.clearInterval(challengeCountdownHandle);
@@ -366,7 +377,7 @@ function startFreePaceSampling(): void {
   if (config?.mode !== 'free') return;
   freePaceHandle = window.setInterval(() => {
     if (!sessionActive || config?.mode !== 'free') return;
-    recordFreePaceSample(performance.now(), stateMachine.count);
+    recordFreePaceSample(performance.now());
   }, 10_000);
 }
 
@@ -377,12 +388,15 @@ function stopFreePaceSampling(): void {
   }
 }
 
-function recordFreePaceSample(now: number, reps: number): void {
+function recordFreePaceSample(now: number): void {
   if (!freeSessionStart) return;
   const elapsedSeconds = Math.max(0, Math.floor((now - freeSessionStart) / 1000));
   if (elapsedSeconds <= 0) return;
 
-  const rpm = reps > 0 ? reps / (elapsedSeconds / 60) : null;
+  const rpm =
+    freeRepTimestamps.length === 0
+      ? null
+      : computeRollingRpm(freeRepTimestamps, freeSessionStart, now);
   const last = freePaceSamples.length > 0 ? freePaceSamples[freePaceSamples.length - 1] : null;
   if (last && last.t === elapsedSeconds) return;
   freePaceSamples.push({ t: elapsedSeconds, rpm });
