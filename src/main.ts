@@ -25,6 +25,8 @@ let prevRepCount = 0;
 let freeSessionStart = 0;
 /** Rep completion timestamps (challenge-style rolling tempo window). */
 let freeRepTimestamps: number[] = [];
+/** Peak rolling RPM during this free session (same formula as HUD). */
+let freeMaxRollingRpm: number | null = null;
 let freePaceSamples: PaceSample[] = [];
 let freePaceHandle = 0;
 let challengeCountdownHandle = 0;
@@ -85,6 +87,7 @@ function startSession(): void {
   if (config?.mode === 'free') {
     freeSessionStart = performance.now();
     freeRepTimestamps = [];
+    freeMaxRollingRpm = null;
     freePaceSamples = [];
     startFreePaceSampling();
     hud.updateRepCount(0);
@@ -148,17 +151,17 @@ function stopSession(showResult = true): void {
 
   if (config?.mode === 'free' && showResult) {
     const reps = stateMachine.count;
-    const elapsedSeconds = freeSessionStart > 0 ? Math.max(0, Math.floor((performance.now() - freeSessionStart) / 1000)) : 0;
+    const elapsedPreciseMs =
+      freeSessionStart > 0 ? performance.now() - freeSessionStart : 0;
+    const elapsedSeconds = Math.max(0, Math.floor(elapsedPreciseMs / 1000));
     recordFreePaceSample(performance.now());
 
-    const tempos = tempo.allTempos;
-    const avgTempo = tempo.averageTempo;
-    const averageRpm = avgTempo && avgTempo.total > 0 ? 60 / avgTempo.total : null;
-    let maxRpm: number | null = null;
-    for (const t of tempos) {
-      if (t.total <= 0) continue;
-      const rpm = 60 / t.total;
-      if (maxRpm === null || rpm > maxRpm) maxRpm = rpm;
+    // Session throughput — same notion as HUD/challenge aggregate (includes rest between reps).
+    const averageRpm =
+      reps > 0 && elapsedPreciseMs > 0 ? reps / (elapsedPreciseMs / 60000) : null;
+    let maxRpm = freeMaxRollingRpm;
+    if (maxRpm === null && reps > 0 && freeSessionStart > 0) {
+      maxRpm = computeRollingRpm(freeRepTimestamps, freeSessionStart, performance.now());
     }
 
     resultScreen.show({
@@ -294,6 +297,9 @@ function processFrame(): void {
         ? null
         : computeRollingRpm(freeRepTimestamps, freeSessionStart, timestamp);
     hud.updateRollingRpmFree(rpmDisp);
+    if (freeRepTimestamps.length > 0 && rpmDisp !== null) {
+      freeMaxRollingRpm = Math.max(freeMaxRollingRpm ?? 0, rpmDisp);
+    }
   }
 }
 
@@ -351,6 +357,7 @@ async function goToStartScreen(): Promise<void> {
   challenge = null;
   freeSessionStart = 0;
   freeRepTimestamps = [];
+  freeMaxRollingRpm = null;
   stopFreePaceSampling();
   if (challengeCountdownHandle) {
     window.clearInterval(challengeCountdownHandle);

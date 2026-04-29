@@ -41,6 +41,8 @@ export class ResultScreen {
   private freeChartRoot: HTMLElement;
   private freeChartBarsEl: HTMLElement;
   private freeChartRangeEl: HTMLElement;
+  private freeChartYMaxEl: HTMLElement;
+  private freeChartYMidEl: HTMLElement;
   private btnFreeBack: HTMLButtonElement;
   private btnSave: HTMLButtonElement;
   private btnHome: HTMLButtonElement;
@@ -67,6 +69,8 @@ export class ResultScreen {
     this.freeChartRoot = document.getElementById('result-free-chart')!;
     this.freeChartBarsEl = document.getElementById('result-free-chart-bars')!;
     this.freeChartRangeEl = document.getElementById('result-free-chart-range')!;
+    this.freeChartYMaxEl = document.getElementById('result-free-chart-y-max')!;
+    this.freeChartYMidEl = document.getElementById('result-free-chart-y-mid')!;
     this.btnFreeBack = document.getElementById('btn-result-free-back') as HTMLButtonElement;
     this.btnSave = document.getElementById('btn-result-save') as HTMLButtonElement;
     this.btnHome = document.getElementById('btn-result-home') as HTMLButtonElement;
@@ -149,6 +153,9 @@ export class ResultScreen {
 
     this.freeChartRoot.classList.remove('hidden');
 
+    this.freeChartYMaxEl.textContent = formatChartAxisRpm(max);
+    this.freeChartYMidEl.textContent = formatChartAxisRpm(max / 2);
+
     for (const s of series) {
       const bar = document.createElement('div');
       bar.className = 'result-chart-bar';
@@ -167,6 +174,13 @@ export class ResultScreen {
 function formatRpm(v: number | null): string {
   if (v === null || !Number.isFinite(v) || v <= 0) return '--';
   return v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10);
+}
+
+/** Y-axis ticks (RPM) — readable integers or one decimal. */
+function formatChartAxisRpm(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return '0';
+  if (value >= 100) return String(Math.round(value));
+  return String(Math.round(value * 10) / 10);
 }
 
 function aggregateToMaxBars(

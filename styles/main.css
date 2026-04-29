@@ -1838,9 +1838,36 @@ html, body {
   white-space: nowrap;
 }
 
-.result-chart-plot {
-  height: 150px;
+.result-chart-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
   margin-top: 12px;
+}
+
+.result-chart-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  min-width: 2.75rem;
+  min-height: 150px;
+  padding: 2px 0;
+  align-self: stretch;
+}
+
+.result-chart-y-tick {
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1;
+}
+
+.result-chart-plot {
+  box-sizing: border-box;
+  height: 150px;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.10);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1867,18 +1894,6 @@ html, body {
 
 .result-chart-bar.is-empty {
   opacity: 0.25;
-}
-
-.result-chart-axis {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 10px;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  opacity: 0.35;
 }
 
 .result-footer {
