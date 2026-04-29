@@ -9,7 +9,7 @@ import { Overlay } from './ui/overlay';
 import { HUD } from './ui/hud';
 import { Controls } from './ui/controls';
 import { StartScreen, type WorkoutConfig } from './ui/start-screen';
-import { ResultScreen } from './ui/result-screen';
+import { ResultScreen, type PaceSample } from './ui/result-screen';
 
 let running = false;
 let sessionActive = false;
@@ -20,12 +20,19 @@ let angleCalc: AngleCalculator;
 let stateMachine: ExerciseStateMachine;
 let tempo: TempoTracker;
 let challenge: ChallengeTracker | null = null;
-let lastChallengeUpdate = 0;
 let prevRepCount = 0;
+let freeSessionStart = 0;
+let freePaceSamples: PaceSample[] = [];
+let freePaceHandle = 0;
+let challengeCountdownHandle = 0;
+let challengeCountdownEndsAt = 0;
+let challengeStateHandle = 0;
 
 const loadingScreen = document.getElementById('loading-screen')!;
 const loadingText = document.getElementById('loading-text')!;
 const cameraContainer = document.getElementById('camera-container')!;
+const startScreenEl = document.getElementById('start-screen')!;
+const bottomNav = document.getElementById('bottom-nav')!;
 const gestureIndicatorEl = document.getElementById('gesture-indicator')!;
 const gestureProgressEl = document.getElementById(
   'gesture-progress'
@@ -42,6 +49,17 @@ const hud = new HUD();
 const controls = new Controls();
 const startScreen = new StartScreen();
 const resultScreen = new ResultScreen();
+
+document.getElementById('nav-workout')!.addEventListener('click', () => {
+  // "Workout" returns to home (mode selection) everywhere except active camera.
+  if (!cameraContainer.classList.contains('hidden')) return;
+  resultScreen.hide();
+  if (startScreenEl.classList.contains('hidden')) {
+    void goToStartScreen();
+  } else {
+    startScreen.goHome();
+  }
+});
 
 controls.onSessionToggle = (active) => {
   if (active) startSession();
@@ -62,24 +80,37 @@ function startSession(): void {
   prevRepCount = 0;
 
   if (config?.mode === 'free') {
+    freeSessionStart = performance.now();
+    freePaceSamples = [];
+    startFreePaceSampling();
     hud.updateRepCount(0);
     hud.updateTempo(null);
     hud.startTimer();
   }
 
   if (config?.mode === 'challenge' && config.targetReps && config.targetTimeSeconds) {
-    challenge = new ChallengeTracker(config.targetReps, config.targetTimeSeconds);
-    challenge.start();
-    lastChallengeUpdate = 0;
+    const delay = Math.max(0, Math.min(59, config.targetDelaySeconds ?? 0));
+
+    // Reset UI to "not started yet" values.
     hud.updateChallenge({
       remainingReps: config.targetReps,
       remainingSeconds: config.targetTimeSeconds,
-      targetTempo: Math.round(config.targetReps / (config.targetTimeSeconds / 60) * 10) / 10,
+      targetTempo: Math.round((config.targetReps / (config.targetTimeSeconds / 60)) * 10) / 10,
       currentTempo: 0,
       paceStatus: 'idle',
       completed: false,
       succeeded: false,
     });
+
+    if (delay > 0) {
+      // Pre-start countdown: do not count reps or time yet.
+      sessionActive = false;
+      challenge = null;
+      startChallengeCountdown(delay);
+      return;
+    }
+
+    beginChallenge();
   }
 }
 
@@ -87,12 +118,127 @@ function stopSession(showResult = true): void {
   sessionActive = false;
   hud.stopTimer();
   gesture.reset();
+  stopFreePaceSampling();
+
+  if (challengeStateHandle) {
+    window.clearInterval(challengeStateHandle);
+    challengeStateHandle = 0;
+  }
+
+  if (challengeCountdownHandle) {
+    window.clearInterval(challengeCountdownHandle);
+    challengeCountdownHandle = 0;
+    challengeCountdownEndsAt = 0;
+    // Cancel pending start; no results.
+    challenge = null;
+    const labelEl = document.getElementById('challenge-time-label');
+    if (labelEl) labelEl.textContent = 'TIME LEFT';
+    const timerEl = document.getElementById('challenge-timer');
+    if (timerEl && config?.mode === 'challenge' && config.targetTimeSeconds) {
+      const mm = Math.floor(config.targetTimeSeconds / 60);
+      const ss = Math.floor(config.targetTimeSeconds % 60);
+      timerEl.textContent = `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+    }
+    return;
+  }
+
+  if (config?.mode === 'free' && showResult) {
+    const reps = stateMachine.count;
+    const elapsedSeconds = freeSessionStart > 0 ? Math.max(0, Math.floor((performance.now() - freeSessionStart) / 1000)) : 0;
+    recordFreePaceSample(performance.now(), reps);
+
+    const tempos = tempo.allTempos;
+    const avgTempo = tempo.averageTempo;
+    const averageRpm = avgTempo && avgTempo.total > 0 ? 60 / avgTempo.total : null;
+    let maxRpm: number | null = null;
+    for (const t of tempos) {
+      if (t.total <= 0) continue;
+      const rpm = 60 / t.total;
+      if (maxRpm === null || rpm > maxRpm) maxRpm = rpm;
+    }
+
+    resultScreen.show({
+      kind: 'free',
+      exerciseName: config.exercise.name,
+      reps,
+      elapsedSeconds,
+      averageRpm,
+      maxRpm,
+      paceSamples: freePaceSamples,
+    });
+
+    running = false;
+    camera.stop();
+    cameraContainer.classList.add('hidden');
+    bottomNav.classList.add('hidden');
+    return;
+  }
 
   if (challenge && showResult) {
     if (!challenge.done) challenge.cancel();
     resultScreen.show(challenge.getResult());
+    running = false;
+    camera.stop();
+    cameraContainer.classList.add('hidden');
+    bottomNav.classList.add('hidden');
   }
   challenge = null;
+}
+
+function beginChallenge(): void {
+  if (!config || config.mode !== 'challenge' || !config.targetReps || !config.targetTimeSeconds) return;
+  challenge = new ChallengeTracker(config.targetReps, config.targetTimeSeconds);
+  challenge.start();
+  sessionActive = true;
+
+  if (challengeStateHandle) window.clearInterval(challengeStateHandle);
+  challengeStateHandle = window.setInterval(() => {
+    if (!challenge || config?.mode !== 'challenge') return;
+    const state = challenge.getState();
+    hud.updateChallenge(state);
+
+    if (state.completed) {
+      controls.setActive(false);
+      resultScreen.show(challenge.getResult());
+      running = false;
+      camera.stop();
+      cameraContainer.classList.add('hidden');
+      bottomNav.classList.add('hidden');
+      sessionActive = false;
+      gesture.reset();
+      challenge = null;
+      if (challengeStateHandle) {
+        window.clearInterval(challengeStateHandle);
+        challengeStateHandle = 0;
+      }
+    }
+  }, 250);
+}
+
+function startChallengeCountdown(delaySeconds: number): void {
+  if (!config || config.mode !== 'challenge') return;
+  const start = performance.now();
+  challengeCountdownEndsAt = start + delaySeconds * 1000;
+
+  const tick = (): void => {
+    const now = performance.now();
+    const remaining = Math.max(0, Math.ceil((challengeCountdownEndsAt - now) / 1000));
+    const timerEl = document.getElementById('challenge-timer');
+    const labelEl = document.getElementById('challenge-time-label');
+    if (labelEl) labelEl.textContent = 'STARTS IN';
+    if (timerEl) timerEl.textContent = `00:${String(remaining).padStart(2, '0')}`;
+
+    if (remaining <= 0) {
+      window.clearInterval(challengeCountdownHandle);
+      challengeCountdownHandle = 0;
+      challengeCountdownEndsAt = 0;
+      if (labelEl) labelEl.textContent = 'TIME LEFT';
+      beginChallenge();
+    }
+  };
+
+  tick();
+  challengeCountdownHandle = window.setInterval(tick, 250);
 }
 
 function processFrame(): void {
@@ -138,21 +284,6 @@ function processFrame(): void {
       }
     }
     prevRepCount = currentCount;
-
-    if (timestamp - lastChallengeUpdate > 500) {
-      lastChallengeUpdate = timestamp;
-      const state = challenge.getState();
-      hud.updateChallenge(state);
-
-      if (state.completed) {
-        controls.setActive(false);
-        resultScreen.show(challenge!.getResult());
-        sessionActive = false;
-        hud.stopTimer();
-        gesture.reset();
-        challenge = null;
-      }
-    }
   }
 }
 
@@ -173,12 +304,23 @@ function initExercise(cfg: WorkoutConfig): void {
   stateMachine = new ExerciseStateMachine(cfg.exercise);
   tempo = new TempoTracker(cfg.exercise);
   challenge = null;
+  if (challengeCountdownHandle) {
+    window.clearInterval(challengeCountdownHandle);
+    challengeCountdownHandle = 0;
+    challengeCountdownEndsAt = 0;
+  }
+  if (challengeStateHandle) {
+    window.clearInterval(challengeStateHandle);
+    challengeStateHandle = 0;
+  }
 
   stateMachine.onChange((event) => tempo.onStateChange(event));
 
   hud.reset();
   hud.setExerciseName(cfg.exercise.name);
   hud.setMode(cfg.mode);
+  const labelEl = document.getElementById('challenge-time-label');
+  if (labelEl) labelEl.textContent = 'TIME LEFT';
 
   if (cfg.mode === 'challenge' && cfg.targetReps && cfg.targetTimeSeconds) {
     hud.updateChallenge({
@@ -197,9 +339,21 @@ async function goToStartScreen(): Promise<void> {
   running = false;
   sessionActive = false;
   challenge = null;
+  freeSessionStart = 0;
+  stopFreePaceSampling();
+  if (challengeCountdownHandle) {
+    window.clearInterval(challengeCountdownHandle);
+    challengeCountdownHandle = 0;
+    challengeCountdownEndsAt = 0;
+  }
+  if (challengeStateHandle) {
+    window.clearInterval(challengeStateHandle);
+    challengeStateHandle = 0;
+  }
   hud.stopTimer();
   camera.stop();
   cameraContainer.classList.add('hidden');
+  bottomNav.classList.remove('hidden');
   resultScreen.hide();
   controls.setActive(false);
 
@@ -207,10 +361,38 @@ async function goToStartScreen(): Promise<void> {
   await launchCamera(cfg);
 }
 
+function startFreePaceSampling(): void {
+  stopFreePaceSampling();
+  if (config?.mode !== 'free') return;
+  freePaceHandle = window.setInterval(() => {
+    if (!sessionActive || config?.mode !== 'free') return;
+    recordFreePaceSample(performance.now(), stateMachine.count);
+  }, 10_000);
+}
+
+function stopFreePaceSampling(): void {
+  if (freePaceHandle) {
+    window.clearInterval(freePaceHandle);
+    freePaceHandle = 0;
+  }
+}
+
+function recordFreePaceSample(now: number, reps: number): void {
+  if (!freeSessionStart) return;
+  const elapsedSeconds = Math.max(0, Math.floor((now - freeSessionStart) / 1000));
+  if (elapsedSeconds <= 0) return;
+
+  const rpm = reps > 0 ? reps / (elapsedSeconds / 60) : null;
+  const last = freePaceSamples.length > 0 ? freePaceSamples[freePaceSamples.length - 1] : null;
+  if (last && last.t === elapsedSeconds) return;
+  freePaceSamples.push({ t: elapsedSeconds, rpm });
+}
+
 async function launchCamera(cfg: WorkoutConfig): Promise<void> {
   initExercise(cfg);
   loadingScreen.classList.remove('hidden');
   loadingText.textContent = 'Starting camera…';
+  bottomNav.classList.add('hidden');
 
   try {
     await camera.start();
@@ -234,6 +416,7 @@ async function init(): Promise<void> {
     });
 
     loadingScreen.classList.add('hidden');
+    bottomNav.classList.remove('hidden');
 
     const cfg = await startScreen.show();
     await launchCamera(cfg);

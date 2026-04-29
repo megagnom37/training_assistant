@@ -48,6 +48,10 @@ export class TempoTracker {
     };
   }
 
+  get allTempos(): readonly RepTempo[] {
+    return this.repTempos;
+  }
+
   reset(): void {
     this.timestamps.clear();
     this.repTempos = [];

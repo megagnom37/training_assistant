@@ -12,7 +12,8 @@ import type { ExerciseDefinition } from './types';
  */
 export const KETTLEBELL_SNATCH: ExerciseDefinition = {
   id: 'kettlebell-snatch',
-  name: 'Рывок гири',
+  name: 'Kettlebell Snatch',
+  bodyPart: 'full',
   angles: [
     {
       id: 'shoulder',

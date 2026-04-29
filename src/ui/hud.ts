@@ -5,10 +5,9 @@ import type { PaceStatus, ChallengeState } from '../challenge-tracker';
 export class HUD {
   private repCountEl: HTMLElement;
   private timerEl: HTMLElement;
-  private tempoDownEl: HTMLElement;
-  private tempoPauseEl: HTMLElement;
-  private tempoUpEl: HTMLElement;
   private exerciseNameEl: HTMLElement;
+  private modeLabelEl: HTMLElement;
+  private paceEl: HTMLElement;
 
   private hudFree: HTMLElement;
   private hudChallenge: HTMLElement;
@@ -24,10 +23,9 @@ export class HUD {
   constructor() {
     this.repCountEl = document.getElementById('rep-count')!;
     this.timerEl = document.getElementById('session-timer')!;
-    this.tempoDownEl = document.getElementById('tempo-down')!;
-    this.tempoPauseEl = document.getElementById('tempo-pause')!;
-    this.tempoUpEl = document.getElementById('tempo-up')!;
     this.exerciseNameEl = document.getElementById('exercise-name')!;
+    this.modeLabelEl = document.getElementById('mode-label')!;
+    this.paceEl = document.getElementById('session-pace')!;
 
     this.hudFree = document.getElementById('hud-free')!;
     this.hudChallenge = document.getElementById('hud-challenge')!;
@@ -42,6 +40,7 @@ export class HUD {
     this.hudFree.classList.toggle('hidden', mode !== 'free');
     this.hudChallenge.classList.toggle('hidden', mode !== 'challenge');
     this.timerEl.classList.toggle('hidden', mode !== 'free');
+    this.modeLabelEl.textContent = mode === 'free' ? 'FREE MODE' : 'CHALLENGE';
   }
 
   setExerciseName(name: string): void {
@@ -57,15 +56,13 @@ export class HUD {
   }
 
   updateTempo(tempo: RepTempo | null): void {
-    if (!tempo) {
-      this.tempoDownEl.textContent = '\u25BC --';
-      this.tempoPauseEl.textContent = '\u23F8 --';
-      this.tempoUpEl.textContent = '\u25B2 --';
+    if (!tempo || tempo.total <= 0) {
+      this.paceEl.textContent = '-- RPM';
       return;
     }
-    this.tempoDownEl.textContent = `\u25BC ${tempo.eccentric.toFixed(1)}s`;
-    this.tempoPauseEl.textContent = `\u23F8 ${tempo.pause.toFixed(1)}s`;
-    this.tempoUpEl.textContent = `\u25B2 ${tempo.concentric.toFixed(1)}s`;
+    const rpm = 60 / tempo.total;
+    const rounded = rpm >= 100 ? Math.round(rpm) : Math.round(rpm * 10) / 10;
+    this.paceEl.textContent = `${rounded} RPM`;
   }
 
   updateChallenge(state: ChallengeState): void {

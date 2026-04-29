@@ -17,6 +17,7 @@ export interface StateTransition {
 export interface ExerciseDefinition {
   id: string;
   name: string;
+  bodyPart: 'upper' | 'lower' | 'full';
   angles: AngleDefinition[];
   states: string[];
   initialState: string;

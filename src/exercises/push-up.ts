@@ -9,6 +9,7 @@ import type { ExerciseDefinition } from './types';
 export const PUSH_UP: ExerciseDefinition = {
   id: 'push-up',
   name: 'Push-ups',
+  bodyPart: 'upper',
   angles: [
     {
       id: 'elbow',

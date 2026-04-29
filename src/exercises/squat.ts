@@ -10,6 +10,7 @@ import type { ExerciseDefinition } from './types';
 export const SQUAT: ExerciseDefinition = {
   id: 'squat',
   name: 'Squats',
+  bodyPart: 'lower',
   angles: [
     {
       id: 'knee',

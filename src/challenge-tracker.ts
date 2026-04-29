@@ -24,7 +24,7 @@ export interface ChallengeResult {
 export class ChallengeTracker {
   private targetReps: number;
   private targetTimeMs: number;
-  private targetTempo: number;
+  private initialTargetTempo: number;
 
   private repTimestamps: number[] = [];
   private startTime = 0;
@@ -36,7 +36,7 @@ export class ChallengeTracker {
   constructor(targetReps: number, targetTimeSeconds: number) {
     this.targetReps = targetReps;
     this.targetTimeMs = targetTimeSeconds * 1000;
-    this.targetTempo = targetReps / (targetTimeSeconds / 60);
+    this.initialTargetTempo = targetReps / (targetTimeSeconds / 60);
   }
 
   start(): void {
@@ -78,14 +78,17 @@ export class ChallengeTracker {
     }
 
     const currentTempo = this.computeCurrentTempo(now);
+    const dynamicTargetTempo = this.computeDynamicTargetTempo(remainingReps, remainingMs);
     const paceStatus = this.repTimestamps.length === 0
       ? 'idle' as PaceStatus
-      : currentTempo >= this.targetTempo * 0.9 ? 'on-pace' : 'behind';
+      : dynamicTargetTempo <= 0
+        ? 'on-pace'
+        : currentTempo >= dynamicTargetTempo * 0.9 ? 'on-pace' : 'behind';
 
     return {
       remainingReps,
       remainingSeconds: Math.ceil(remainingMs / 1000),
-      targetTempo: Math.round(this.targetTempo * 10) / 10,
+      targetTempo: Math.round(dynamicTargetTempo * 10) / 10,
       currentTempo: Math.round(currentTempo * 10) / 10,
       paceStatus,
       completed: this._done,
@@ -117,7 +120,7 @@ export class ChallengeTracker {
       actualReps,
       targetTimeSeconds: this.targetTimeMs / 1000,
       elapsedSeconds: Math.round(elapsedSeconds * 10) / 10,
-      targetTempo: Math.round(this.targetTempo * 10) / 10,
+      targetTempo: Math.round(this.initialTargetTempo * 10) / 10,
       averageTempo: Math.round(averageTempo * 10) / 10,
     };
   }
@@ -136,6 +139,14 @@ export class ChallengeTracker {
     }
 
     return count * (60_000 / windowMs);
+  }
+
+  private computeDynamicTargetTempo(remainingReps: number, remainingMs: number): number {
+    if (remainingReps <= 0) return 0;
+    if (remainingMs <= 0) return 0;
+    const remainingMinutes = remainingMs / 60_000;
+    if (remainingMinutes <= 0) return 0;
+    return remainingReps / remainingMinutes;
   }
 
   get done(): boolean {

@@ -22,91 +22,243 @@
 
     <div id="start-screen" class="hidden">
       <div class="start-screen-inner">
-        <!-- Step 1: Exercise -->
-        <div id="step-exercise" class="step">
-          <h2 class="step-title">Упражнение</h2>
-          <div id="exercise-cards" class="card-grid"></div>
+        <!-- Step 1: Mode selection (home) -->
+        <div id="step-mode-select" class="step">
+          <header class="appbar">
+            <div class="appbar-logo">REPS</div>
+          </header>
+
+          <div class="home-title">
+            <div class="home-eyebrow">CHOOSE MODE</div>
+            <div class="home-underline"></div>
+          </div>
+
+          <div class="mode-grid">
+            <button class="mode-card" type="button" data-mode="free">
+              <div class="mode-card-top">
+                <span class="mode-icon" aria-hidden="true">&#x23F1;</span>
+              </div>
+              <div class="mode-card-bottom">
+                <div class="mode-title">Free</div>
+                <div class="mode-subtitle">Open workout</div>
+              </div>
+            </button>
+
+            <!-- Unsupported for now: no action -->
+            <div class="mode-card mode-card-disabled" aria-disabled="true">
+              <div class="mode-card-top">
+                <span class="mode-icon mode-icon-dim" aria-hidden="true">&#x23F3;</span>
+              </div>
+              <div class="mode-card-bottom">
+                <div class="mode-title">Tempo</div>
+                <div class="mode-subtitle">With intervals</div>
+              </div>
+            </div>
+
+            <button class="mode-card mode-card-wide" type="button" data-mode="challenge">
+              <div class="mode-card-wide-badge">DAILY</div>
+              <div class="mode-card-top">
+                <span class="mode-icon" aria-hidden="true">&#x1F3C6;</span>
+              </div>
+              <div class="mode-card-bottom">
+                <div class="mode-title mode-title-xl">Challenge</div>
+                <div class="mode-subtitle">Compete for rank</div>
+              </div>
+            </button>
+
+            <!-- Unsupported for now: no action -->
+            <div class="mode-card mode-card-wide mode-card-disabled" aria-disabled="true">
+              <div class="mode-card-top">
+                <span class="mode-icon mode-icon-dim" aria-hidden="true">&#x1F9E9;</span>
+              </div>
+              <div class="mode-card-bottom">
+                <div class="mode-title">Complex</div>
+                <div class="mode-subtitle">Advanced schemes</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Step 2: Mode -->
-        <div id="step-mode" class="step hidden">
-          <h2 class="step-title">Режим</h2>
-          <div class="card-grid">
-            <button class="card" data-mode="free">
-              <span class="card-icon">&#x23F1;</span>
-              <span class="card-label">Свободный</span>
-            </button>
-            <button class="card" data-mode="challenge">
-              <span class="card-icon">&#x1F3AF;</span>
-              <span class="card-label">Челлендж</span>
-            </button>
+        <!-- Step 2: Exercise -->
+        <div id="step-exercise" class="step hidden">
+          <header class="exercise-header">
+            <button id="btn-back-home" class="exercise-back" type="button" aria-label="Back">&#x2190;</button>
+            <div class="exercise-logo">REPS</div>
+            <div class="exercise-spacer"></div>
+          </header>
+
+          <section class="exercise-title">
+            <h2 class="exercise-h1">Select Exercise</h2>
+            <p class="exercise-subtitle">Choose your focus for this set</p>
+          </section>
+
+          <div class="exercise-search">
+            <span class="exercise-search-icon" aria-hidden="true">&#x1F50D;</span>
+            <input id="exercise-search-input" class="exercise-search-input" type="text" placeholder="Search exercises..." />
           </div>
-          <button id="btn-back-exercise" class="btn-back" type="button">&#x2190; Назад</button>
+
+          <div class="exercise-filters" role="tablist" aria-label="Body part filters">
+            <button class="filter-chip filter-chip-active" type="button" data-body-part="all">All</button>
+            <button class="filter-chip" type="button" data-body-part="upper">Upper Body</button>
+            <button class="filter-chip" type="button" data-body-part="lower">Lower Body</button>
+            <button class="filter-chip" type="button" data-body-part="full">Full Body</button>
+          </div>
+
+          <div id="exercise-list" class="exercise-list"></div>
         </div>
 
         <!-- Step 3: Challenge config -->
         <div id="step-challenge" class="step hidden">
-          <h2 class="step-title">Настройка челленджа</h2>
-          <div class="config-form">
-            <label class="config-field">
-              <span>Количество повторений</span>
-              <input id="input-reps" type="number" inputmode="numeric" min="1" max="999" value="20" />
-            </label>
-            <label class="config-field">
-              <span>Время (мин : сек)</span>
-              <div class="time-inputs">
-                <input id="input-min" type="number" inputmode="numeric" min="0" max="59" value="2" />
-                <span class="time-sep">:</span>
-                <input id="input-sec" type="number" inputmode="numeric" min="0" max="59" value="0" />
+          <header class="challenge-header">
+            <button id="btn-back-mode" class="challenge-back" type="button" aria-label="Back">&#x2190;</button>
+            <div class="challenge-logo">REPS</div>
+            <div class="challenge-spacer"></div>
+          </header>
+
+          <section class="challenge-hero">
+            <h2 class="challenge-title">SET YOUR<br/>CHALLENGE</h2>
+          </section>
+
+          <section class="challenge-section">
+            <div class="challenge-section-title">
+              <span class="challenge-section-h">SESSION TIME</span>
+              <span class="challenge-section-meta">(MIN)</span>
+            </div>
+
+            <div class="challenge-card">
+              <div class="challenge-time">
+                <div class="challenge-wheel" id="wheel-min" aria-label="Minutes"></div>
+                <div class="challenge-time-sep" aria-hidden="true">:</div>
+                <div class="challenge-wheel" id="wheel-sec" aria-label="Seconds"></div>
+                <div class="challenge-time-caption challenge-time-caption-min">MINS</div>
+                <div class="challenge-time-caption challenge-time-caption-sec">SECS</div>
               </div>
-            </label>
+            </div>
+          </section>
+
+          <section class="challenge-section">
+            <div class="challenge-row-2">
+              <div class="challenge-mini">
+                <div class="challenge-mini-title">TARGET REPS</div>
+                <div class="challenge-card challenge-card-compact">
+                <button id="btn-reps-dec" class="challenge-stepper challenge-stepper-sm" type="button" aria-label="Decrease reps">–</button>
+                <div class="challenge-value">
+                  <input id="input-reps" class="challenge-reps-input challenge-reps-input-sm" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Target reps" value="10" />
+                  <div class="challenge-value-sub challenge-value-sub-sm">REPS</div>
+                </div>
+                <button id="btn-reps-inc" class="challenge-stepper challenge-stepper-sm" type="button" aria-label="Increase reps">+</button>
+              </div>
+              </div>
+
+              <div class="challenge-mini">
+                <div class="challenge-mini-title">START DELAY</div>
+                <div class="challenge-card challenge-card-compact challenge-card-delay">
+                  <div class="challenge-delay-wheel">
+                    <div class="challenge-wheel challenge-wheel-compact" id="wheel-delay" aria-label="Delay seconds"></div>
+                  </div>
+                  <div class="challenge-delay-caption">SECS</div>
+              </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Keep existing inputs for config (hidden) -->
+          <input id="input-min" class="challenge-hidden-input" type="number" inputmode="numeric" min="0" max="59" value="1" />
+          <input id="input-sec" class="challenge-hidden-input" type="number" inputmode="numeric" min="0" max="59" value="0" />
+          <input id="input-delay" class="challenge-hidden-input" type="number" inputmode="numeric" min="0" max="59" value="10" />
+
+          <div class="challenge-action">
+            <button id="btn-go" class="challenge-start" type="button">
+              <span class="challenge-start-icon" aria-hidden="true">&#x25B6;</span>
+              <span>START WORKOUT</span>
+            </button>
           </div>
-          <button id="btn-go" class="btn-go" type="button">Старт</button>
-          <button id="btn-back-mode" class="btn-back" type="button">&#x2190; Назад</button>
         </div>
       </div>
     </div>
+
+    <!-- Bottom navigation (hidden during active camera) -->
+    <nav id="bottom-nav" class="bottom-nav hidden" aria-label="Bottom navigation">
+      <button class="bottom-nav-item" type="button" aria-label="Log" disabled>
+        <span class="bottom-nav-icon" aria-hidden="true">&#x1F5D3;</span>
+        <span class="bottom-nav-label">Log</span>
+      </button>
+
+      <button id="nav-workout" class="bottom-nav-item bottom-nav-item-active" type="button" aria-label="Workout">
+        <span class="bottom-nav-icon" aria-hidden="true">&#x1F3CB;</span>
+        <span class="bottom-nav-label">Workout</span>
+      </button>
+
+      <button class="bottom-nav-item" type="button" aria-label="Account" disabled>
+        <span class="bottom-nav-icon" aria-hidden="true">&#x1F464;</span>
+        <span class="bottom-nav-label">Account</span>
+      </button>
+    </nav>
 
     <div id="camera-container" class="hidden">
       <video id="camera-video" autoplay muted playsinline webkit-playsinline></video>
       <canvas id="overlay-canvas"></canvas>
 
-      <div id="hud">
-        <div id="hud-top">
-          <span id="session-timer">00:00</span>
-          <span id="exercise-name">Squats</span>
+      <header class="cam-topbar">
+        <button id="btn-back-start" class="cam-back" type="button" aria-label="Back">
+          &#x2190;
+        </button>
+        <div class="cam-title">
+          <span id="exercise-name" class="cam-exercise">Squats</span>
+          <span id="mode-label" class="cam-mode">FREE MODE</span>
         </div>
+      </header>
 
+      <div id="hud">
         <!-- Free mode HUD -->
-        <div id="hud-free">
-          <div id="rep-counter">
-            <span id="rep-count">0</span>
+        <div id="hud-free" class="cam-hud-panel">
+          <div class="cam-hud-block">
+            <div class="cam-reps">
+              <span id="rep-count" class="cam-reps-value">0</span>
+              <span class="cam-reps-label">REPS</span>
+            </div>
           </div>
-          <div id="tempo-display">
-            <span id="tempo-down" class="tempo-phase">&#x25BC; --</span>
-            <span id="tempo-pause" class="tempo-phase">&#x23F8; --</span>
-            <span id="tempo-up" class="tempo-phase">&#x25B2; --</span>
+
+          <div class="cam-hud-block">
+            <div class="cam-time">
+              <span id="session-timer" class="cam-time-value">00:00</span>
+              <span class="cam-time-label">ELAPSED</span>
+            </div>
+          </div>
+
+          <div class="cam-hud-block">
+            <div class="cam-pace">
+              <span class="cam-pace-icon" aria-hidden="true">◐</span>
+              <span id="session-pace" class="cam-pace-value">-- RPM</span>
+            </div>
+            <div class="cam-pace-label">CURRENT RATE</div>
           </div>
         </div>
 
         <!-- Challenge mode HUD -->
-        <div id="hud-challenge" class="hidden">
-          <div id="challenge-center">
-            <div id="challenge-timer">02:00</div>
-            <div id="challenge-reps-remaining">20</div>
-            <span id="challenge-reps-label">осталось</span>
+        <div id="hud-challenge" class="cam-hud-panel hidden">
+          <div class="cam-challenge-metrics">
+            <div class="cam-challenge-reps-block">
+              <span id="challenge-reps-remaining" class="cam-challenge-reps">20</span>
+              <span id="challenge-reps-label" class="cam-challenge-label">REPS LEFT</span>
+            </div>
+            <div class="cam-challenge-time-block">
+              <span id="challenge-timer" class="cam-challenge-timer">02:00</span>
+              <span id="challenge-time-label" class="cam-challenge-time-label">TIME LEFT</span>
+            </div>
           </div>
-          <div id="challenge-tempo-bar">
+
+          <div id="challenge-tempo-bar" class="cam-challenge-bar">
             <div id="pace-indicator"></div>
             <div class="tempo-col">
-              <span class="tempo-label">Цель</span>
+              <span class="tempo-label">Target</span>
               <span id="target-tempo">0</span>
-              <span class="tempo-unit">повт/мин</span>
+              <span class="tempo-unit">reps/min</span>
             </div>
             <div class="tempo-col">
-              <span class="tempo-label">Сейчас</span>
+              <span class="tempo-label">Current</span>
               <span id="current-tempo">0</span>
-              <span class="tempo-unit">повт/мин</span>
+              <span class="tempo-unit">reps/min</span>
             </div>
           </div>
         </div>
@@ -120,36 +272,104 @@
         <span>&#x270B;</span>
       </div>
 
-      <div id="controls">
-        <button id="btn-start" type="button">Start</button>
+      <div id="controls" class="cam-controls">
+        <button id="btn-start" class="cam-start" type="button">
+          <span id="btn-start-icon" class="cam-start-icon" aria-hidden="true">&#x25B6;</span>
+          <span id="btn-start-label" class="cam-start-label">START</span>
+        </button>
       </div>
-
-      <button id="btn-back-start" class="btn-back-cam" type="button">&#x2190;</button>
     </div>
 
     <div id="result-screen" class="hidden">
-      <div class="result-inner">
+      <!-- Free mode results -->
+      <div id="result-free" class="result-free hidden">
+        <header class="result-topbar">
+          <button id="btn-result-free-back" class="result-back" type="button" aria-label="Back">
+            &#x2190;
+          </button>
+          <div class="result-brand">REPS</div>
+          <div class="result-spacer" aria-hidden="true"></div>
+        </header>
+
+        <main class="result-free-main">
+          <section class="result-hero">
+            <div id="result-free-subtitle" class="result-hero-subtitle">SQUATS (FREE)</div>
+            <div class="result-hero-title">
+              <span id="result-free-reps" class="result-hero-reps">0</span>
+              <span class="result-hero-reps-label">REPS</span>
+            </div>
+            <div class="result-hero-time">
+              <span class="result-hero-time-icon" aria-hidden="true">&#x23F1;</span>
+              <span id="result-free-time" class="result-hero-time-text">00:00 TOTAL TIME</span>
+            </div>
+          </section>
+
+          <section class="result-cards">
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">AVERAGE RATE</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-free-avg" class="result-card-number">--</span>
+                <span class="result-card-unit">RPM</span>
+              </div>
+            </div>
+
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">MAX RATE</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-free-max" class="result-card-number-sm">--</span>
+                <span class="result-card-unit-sm">RPM</span>
+              </div>
+            </div>
+          </section>
+
+          <section id="result-free-chart" class="result-chart hidden" aria-label="Pace chart">
+            <div class="result-chart-head">
+              <div class="result-chart-title">PACE OVER TIME</div>
+              <div id="result-free-chart-range" class="result-chart-range">00:00 → 00:00</div>
+            </div>
+            <div class="result-chart-plot">
+              <div id="result-free-chart-bars" class="result-chart-bars" aria-hidden="true"></div>
+            </div>
+            <div class="result-chart-axis">
+              <span>TIME</span>
+              <span>RPM</span>
+            </div>
+          </section>
+        </main>
+
+        <footer class="result-footer">
+          <button id="btn-result-save" class="result-btn-primary" type="button">SAVE WORKOUT</button>
+          <button id="btn-result-home" class="result-btn-secondary" type="button">HOME</button>
+        </footer>
+      </div>
+
+      <!-- Challenge results (existing) -->
+      <div id="result-challenge" class="result-inner">
         <div id="result-status-icon"></div>
         <div id="result-status-text"></div>
         <div class="result-stats">
           <div class="result-row">
-            <span class="result-label">Повторения</span>
+            <span class="result-label">Reps</span>
             <span id="result-reps" class="result-value"></span>
           </div>
           <div class="result-row">
-            <span class="result-label">Время</span>
+            <span class="result-label">Time</span>
             <span id="result-time" class="result-value"></span>
           </div>
           <div class="result-row">
-            <span class="result-label">Средний темп</span>
+            <span class="result-label">Average rate</span>
             <span id="result-avg-tempo" class="result-value"></span>
           </div>
           <div class="result-row">
-            <span class="result-label">Целевой темп</span>
+            <span class="result-label">Target rate</span>
             <span id="result-target-tempo" class="result-value"></span>
           </div>
         </div>
-        <button id="btn-result-back" class="btn-go" type="button">Назад</button>
+        <button id="btn-result-back" class="btn-go" type="button">Back</button>
       </div>
     </div>
   </div>
