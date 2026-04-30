@@ -350,29 +350,110 @@
         </footer>
       </div>
 
-      <!-- Challenge results (existing) -->
-      <div id="result-challenge" class="result-inner">
-        <div id="result-status-icon"></div>
-        <div id="result-status-text"></div>
-        <div class="result-stats">
-          <div class="result-row">
-            <span class="result-label">Reps</span>
-            <span id="result-reps" class="result-value"></span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Time</span>
-            <span id="result-time" class="result-value"></span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Average rate</span>
-            <span id="result-avg-tempo" class="result-value"></span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Target rate</span>
-            <span id="result-target-tempo" class="result-value"></span>
-          </div>
-        </div>
-        <button id="btn-result-back" class="btn-go" type="button">Back</button>
+      <!-- Challenge results (styled like Free) -->
+      <div id="result-challenge" class="result-free hidden">
+        <header class="result-topbar">
+          <button id="btn-result-challenge-back" class="result-back" type="button" aria-label="Back">
+            &#x2190;
+          </button>
+          <div class="result-brand">REPS</div>
+          <div class="result-spacer" aria-hidden="true"></div>
+        </header>
+
+        <main class="result-free-main">
+          <section class="result-hero">
+            <div id="result-challenge-subtitle" class="result-hero-subtitle">SQUATS (CHALLENGE)</div>
+            <div class="result-hero-title">
+              <span id="result-status-text" class="result-hero-reps">Completed</span>
+            </div>
+          </section>
+
+          <section class="result-cards">
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">TARGET TIME</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-challenge-time-target" class="result-card-number">00:00</span>
+              </div>
+            </div>
+
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">ELAPSED TIME</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-challenge-time-actual" class="result-card-number">00:00</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="result-cards">
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">TARGET REPS</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-challenge-reps-target" class="result-card-number">0</span>
+                <span class="result-card-unit">REPS</span>
+              </div>
+            </div>
+
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">DONE REPS</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-challenge-reps-actual" class="result-card-number">0</span>
+                <span class="result-card-unit">REPS</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="result-cards">
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">TARGET RATE</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-challenge-tempo-target" class="result-card-number-sm">--</span>
+                <span class="result-card-unit-sm">RPM</span>
+              </div>
+            </div>
+
+            <div class="result-card">
+              <div class="result-card-top">
+                <span class="result-card-title">AVERAGE RATE</span>
+              </div>
+              <div class="result-card-value">
+                <span id="result-challenge-tempo-avg" class="result-card-number-sm">--</span>
+                <span class="result-card-unit-sm">RPM</span>
+              </div>
+            </div>
+          </section>
+
+          <section id="result-challenge-chart" class="result-chart hidden" aria-label="Pace chart">
+            <div class="result-chart-head">
+              <div class="result-chart-title">PACE OVER TIME</div>
+              <div id="result-challenge-chart-range" class="result-chart-range">00:00 → 00:00</div>
+            </div>
+            <div class="result-chart-body">
+              <div class="result-chart-y-axis" aria-hidden="true">
+                <span id="result-challenge-chart-y-max" class="result-chart-y-tick"></span>
+                <span id="result-challenge-chart-y-mid" class="result-chart-y-tick"></span>
+                <span class="result-chart-y-tick">0</span>
+              </div>
+              <div class="result-chart-plot">
+                <div id="result-challenge-chart-bars" class="result-chart-bars" aria-hidden="true"></div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer class="result-footer">
+          <button id="btn-result-challenge-save" class="result-btn-primary" type="button">SAVE WORKOUT</button>
+          <button id="btn-result-challenge-home" class="result-btn-secondary" type="button">HOME</button>
+        </footer>
       </div>
     </div>
   </div>

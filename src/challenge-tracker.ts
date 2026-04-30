@@ -3,6 +3,11 @@ import { computeRollingRpm } from './rolling-rpm';
 export type PaceStatus = 'on-pace' | 'behind' | 'idle';
 export type ChallengeStatus = 'success' | 'failed' | 'cancelled';
 
+export interface PaceSample {
+  t: number; // seconds since session start
+  rpm: number | null;
+}
+
 export interface ChallengeState {
   remainingReps: number;
   remainingSeconds: number;
@@ -15,12 +20,14 @@ export interface ChallengeState {
 
 export interface ChallengeResult {
   status: ChallengeStatus;
+  exerciseName?: string;
   targetReps: number;
   actualReps: number;
   targetTimeSeconds: number;
   elapsedSeconds: number;
   targetTempo: number;
   averageTempo: number;
+  paceSamples: PaceSample[];
 }
 
 export class ChallengeTracker {
@@ -124,7 +131,38 @@ export class ChallengeTracker {
       elapsedSeconds: Math.round(elapsedSeconds * 10) / 10,
       targetTempo: Math.round(this.initialTargetTempo * 10) / 10,
       averageTempo: Math.round(averageTempo * 10) / 10,
+      paceSamples: this.buildPaceSamples(this.startTime, endTime),
     };
+  }
+
+  private buildPaceSamples(startTime: number, endTime: number): PaceSample[] {
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) return [];
+    const elapsedSeconds = Math.max(0, Math.floor((endTime - startTime) / 1000));
+    if (elapsedSeconds <= 0) return [];
+
+    // Mirror free-mode sampling cadence (every 10s) and same rolling RPM function.
+    const interval = 10;
+    const samples: PaceSample[] = [];
+
+    for (let t = interval; t <= elapsedSeconds; t += interval) {
+      const at = startTime + t * 1000;
+      const rpm =
+        this.repTimestamps.length === 0
+          ? null
+          : computeRollingRpm(this.repTimestamps, startTime, at);
+      samples.push({ t, rpm });
+    }
+
+    // Always include a final point at the end if it doesn't align.
+    if (samples.length === 0 || samples[samples.length - 1].t !== elapsedSeconds) {
+      const rpm =
+        this.repTimestamps.length === 0
+          ? null
+          : computeRollingRpm(this.repTimestamps, startTime, endTime);
+      samples.push({ t: elapsedSeconds, rpm });
+    }
+
+    return samples;
   }
 
   private computeCurrentTempo(now: number): number {

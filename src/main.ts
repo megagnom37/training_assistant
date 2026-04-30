@@ -4,12 +4,12 @@ import { AngleCalculator } from './angle-calculator';
 import { ExerciseStateMachine } from './state-machine';
 import { TempoTracker } from './tempo-tracker';
 import { GestureDetector } from './gesture-detector';
-import { ChallengeTracker } from './challenge-tracker';
+import { ChallengeTracker, type PaceSample } from './challenge-tracker';
 import { Overlay } from './ui/overlay';
 import { HUD } from './ui/hud';
 import { Controls } from './ui/controls';
 import { StartScreen, type WorkoutConfig } from './ui/start-screen';
-import { ResultScreen, type PaceSample } from './ui/result-screen';
+import { ResultScreen } from './ui/result-screen';
 import { computeRollingRpm } from './rolling-rpm';
 
 let running = false;
@@ -183,7 +183,10 @@ function stopSession(showResult = true): void {
 
   if (challenge && showResult) {
     if (!challenge.done) challenge.cancel();
-    resultScreen.show(challenge.getResult());
+    resultScreen.show({
+      ...challenge.getResult(),
+      exerciseName: config?.exercise?.name,
+    });
     running = false;
     camera.stop();
     cameraContainer.classList.add('hidden');
@@ -206,7 +209,10 @@ function beginChallenge(): void {
 
     if (state.completed) {
       controls.setActive(false);
-      resultScreen.show(challenge.getResult());
+      resultScreen.show({
+        ...challenge.getResult(),
+        exerciseName: config?.exercise?.name,
+      });
       running = false;
       camera.stop();
       cameraContainer.classList.add('hidden');

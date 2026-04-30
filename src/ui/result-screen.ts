@@ -1,20 +1,15 @@
-import type { ChallengeResult, ChallengeStatus } from '../challenge-tracker';
+import type { ChallengeResult, ChallengeStatus, PaceSample } from '../challenge-tracker';
 
 const STATUS_CONFIG: Record<ChallengeStatus, { icon: string; label: string }> = {
-  success:   { icon: '\u{1F3C6}', label: 'Completed!' },
+  success:   { icon: '\u{1F3C6}', label: 'Completed' },
   failed:    { icon: '\u{274C}',  label: 'Failed' },
-  cancelled: { icon: '\u{23F9}',  label: 'Cancelled' },
+  cancelled: { icon: '\u{23F9}',  label: 'Canceled' },
 };
 
 function formatTime(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60);
   const sec = Math.floor(totalSeconds % 60);
   return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-}
-
-export interface PaceSample {
-  t: number; // seconds since session start
-  rpm: number | null;
 }
 
 export interface FreeModeResult {
@@ -48,12 +43,22 @@ export class ResultScreen {
   private btnHome: HTMLButtonElement;
 
   private challengeRoot: HTMLElement;
-  private statusIconEl: HTMLElement;
   private statusTextEl: HTMLElement;
-  private repsEl: HTMLElement;
-  private timeEl: HTMLElement;
-  private avgTempoEl: HTMLElement;
-  private targetTempoEl: HTMLElement;
+  private challengeSubtitleEl: HTMLElement;
+  private challengeTimeTargetEl: HTMLElement;
+  private challengeTimeActualEl: HTMLElement;
+  private challengeRepsTargetEl: HTMLElement;
+  private challengeRepsActualEl: HTMLElement;
+  private challengeTempoTargetEl: HTMLElement;
+  private challengeTempoAvgEl: HTMLElement;
+  private btnChallengeBack: HTMLButtonElement;
+  private btnChallengeSave: HTMLButtonElement;
+  private btnChallengeHome: HTMLButtonElement;
+  private challengeChartRoot: HTMLElement;
+  private challengeChartBarsEl: HTMLElement;
+  private challengeChartRangeEl: HTMLElement;
+  private challengeChartYMaxEl: HTMLElement;
+  private challengeChartYMidEl: HTMLElement;
 
   onBack: (() => void) | null = null;
 
@@ -76,17 +81,22 @@ export class ResultScreen {
     this.btnHome = document.getElementById('btn-result-home') as HTMLButtonElement;
 
     this.challengeRoot = document.getElementById('result-challenge')!;
-    this.statusIconEl = document.getElementById('result-status-icon')!;
     this.statusTextEl = document.getElementById('result-status-text')!;
-    this.repsEl = document.getElementById('result-reps')!;
-    this.timeEl = document.getElementById('result-time')!;
-    this.avgTempoEl = document.getElementById('result-avg-tempo')!;
-    this.targetTempoEl = document.getElementById('result-target-tempo')!;
-
-    document.getElementById('btn-result-back')!.addEventListener('click', () => {
-      this.hide();
-      this.onBack?.();
-    });
+    this.challengeSubtitleEl = document.getElementById('result-challenge-subtitle')!;
+    this.challengeTimeTargetEl = document.getElementById('result-challenge-time-target')!;
+    this.challengeTimeActualEl = document.getElementById('result-challenge-time-actual')!;
+    this.challengeRepsTargetEl = document.getElementById('result-challenge-reps-target')!;
+    this.challengeRepsActualEl = document.getElementById('result-challenge-reps-actual')!;
+    this.challengeTempoTargetEl = document.getElementById('result-challenge-tempo-target')!;
+    this.challengeTempoAvgEl = document.getElementById('result-challenge-tempo-avg')!;
+    this.btnChallengeBack = document.getElementById('btn-result-challenge-back') as HTMLButtonElement;
+    this.btnChallengeSave = document.getElementById('btn-result-challenge-save') as HTMLButtonElement;
+    this.btnChallengeHome = document.getElementById('btn-result-challenge-home') as HTMLButtonElement;
+    this.challengeChartRoot = document.getElementById('result-challenge-chart')!;
+    this.challengeChartBarsEl = document.getElementById('result-challenge-chart-bars')!;
+    this.challengeChartRangeEl = document.getElementById('result-challenge-chart-range')!;
+    this.challengeChartYMaxEl = document.getElementById('result-challenge-chart-y-max')!;
+    this.challengeChartYMidEl = document.getElementById('result-challenge-chart-y-mid')!;
 
     this.btnFreeBack.addEventListener('click', () => {
       this.hide();
@@ -98,6 +108,20 @@ export class ResultScreen {
     });
     this.btnSave.addEventListener('click', () => {
       // Mock save: confirm and go home.
+      window.alert('Saved');
+      this.hide();
+      this.onBack?.();
+    });
+
+    this.btnChallengeBack.addEventListener('click', () => {
+      this.hide();
+      this.onBack?.();
+    });
+    this.btnChallengeHome.addEventListener('click', () => {
+      this.hide();
+      this.onBack?.();
+    });
+    this.btnChallengeSave.addEventListener('click', () => {
       window.alert('Saved');
       this.hide();
       this.onBack?.();
@@ -116,21 +140,47 @@ export class ResultScreen {
       this.freeTimeEl.textContent = `${formatTime(r.elapsedSeconds)} TOTAL TIME`;
       this.freeAvgEl.textContent = formatRpm(r.averageRpm);
       this.freeMaxEl.textContent = formatRpm(r.maxRpm);
-      this.renderFreePaceChart(r.paceSamples, r.elapsedSeconds);
+      this.renderPaceChart(
+        this.freeChartRoot,
+        this.freeChartBarsEl,
+        this.freeChartRangeEl,
+        this.freeChartYMaxEl,
+        this.freeChartYMidEl,
+        r.paceSamples,
+        r.elapsedSeconds
+      );
     } else {
       const cr = result as ChallengeResult;
       const cfg = STATUS_CONFIG[cr.status];
 
-      this.statusIconEl.textContent = cfg.icon;
       this.statusTextEl.textContent = cfg.label;
       this.statusTextEl.className = '';
       this.statusTextEl.id = 'result-status-text';
       this.statusTextEl.classList.add(cr.status);
 
-      this.repsEl.textContent = `${cr.actualReps} / ${cr.targetReps}`;
-      this.timeEl.textContent = `${formatTime(cr.elapsedSeconds)} / ${formatTime(cr.targetTimeSeconds)}`;
-      this.avgTempoEl.textContent = `${cr.averageTempo} reps/min`;
-      this.targetTempoEl.textContent = `${cr.targetTempo} reps/min`;
+      const exerciseName = (cr.exerciseName ?? '').trim();
+      this.challengeSubtitleEl.textContent = exerciseName
+        ? `${exerciseName.toUpperCase()} (CHALLENGE)`
+        : `CHALLENGE`;
+
+      this.challengeTimeTargetEl.textContent = formatTime(cr.targetTimeSeconds);
+      this.challengeTimeActualEl.textContent = formatTime(cr.elapsedSeconds);
+
+      this.challengeRepsTargetEl.textContent = String(cr.targetReps);
+      this.challengeRepsActualEl.textContent = String(cr.actualReps);
+
+      this.challengeTempoTargetEl.textContent = formatRpm(cr.targetTempo);
+      this.challengeTempoAvgEl.textContent = formatRpm(cr.averageTempo);
+
+      this.renderPaceChart(
+        this.challengeChartRoot,
+        this.challengeChartBarsEl,
+        this.challengeChartRangeEl,
+        this.challengeChartYMaxEl,
+        this.challengeChartYMidEl,
+        cr.paceSamples,
+        cr.elapsedSeconds
+      );
     }
 
     this.root.classList.remove('hidden');
@@ -140,21 +190,29 @@ export class ResultScreen {
     this.root.classList.add('hidden');
   }
 
-  private renderFreePaceChart(samples: readonly PaceSample[], elapsedSeconds: number): void {
+  private renderPaceChart(
+    chartRoot: HTMLElement,
+    chartBarsEl: HTMLElement,
+    chartRangeEl: HTMLElement,
+    chartYMaxEl: HTMLElement,
+    chartYMidEl: HTMLElement,
+    samples: readonly PaceSample[],
+    elapsedSeconds: number
+  ): void {
     const series = aggregateToMaxBars(samples, elapsedSeconds, 10);
     const max = series.reduce((m, s) => (s.rpm !== null && s.rpm > m ? s.rpm : m), 0);
 
-    this.freeChartBarsEl.replaceChildren();
+    chartBarsEl.replaceChildren();
 
     if (series.length === 0 || max <= 0) {
-      this.freeChartRoot.classList.add('hidden');
+      chartRoot.classList.add('hidden');
       return;
     }
 
-    this.freeChartRoot.classList.remove('hidden');
+    chartRoot.classList.remove('hidden');
 
-    this.freeChartYMaxEl.textContent = formatChartAxisRpm(max);
-    this.freeChartYMidEl.textContent = formatChartAxisRpm(max / 2);
+    chartYMaxEl.textContent = formatChartAxisRpm(max);
+    chartYMidEl.textContent = formatChartAxisRpm(max / 2);
 
     for (const s of series) {
       const bar = document.createElement('div');
@@ -164,10 +222,10 @@ export class ResultScreen {
       bar.style.height = `${Math.round(h * 1000) / 10}%`;
       bar.title = `${formatTime(Math.round(s.t))} — ${formatRpm(s.rpm)} RPM`;
       if (s.rpm === null) bar.classList.add('is-empty');
-      this.freeChartBarsEl.appendChild(bar);
+      chartBarsEl.appendChild(bar);
     }
 
-    this.freeChartRangeEl.textContent = `${formatTime(0)} \u2192 ${formatTime(elapsedSeconds)}`;
+    chartRangeEl.textContent = `${formatTime(0)} \u2192 ${formatTime(elapsedSeconds)}`;
   }
 }
 
