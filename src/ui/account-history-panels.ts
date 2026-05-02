@@ -8,6 +8,18 @@ import {
 } from '../google/auth';
 import { ensureEmptyHistoryIfNeeded, loadHistoryJsonForDisplay } from '../google/workout-history-drive';
 
+const HISTORY_PROMPT_SIGN_IN =
+  'Авторизуйтесь через Google на вкладке «Аккаунт», чтобы сохранять и просматривать свои тренировки.';
+
+const HISTORY_PROMPT_SESSION =
+  'Не удалось обновить доступ к Google. Откройте вкладку «Аккаунт» и войдите снова.';
+
+export interface AccountHistoryPanelsOptions {
+  getResumePending?: () => boolean;
+  onGoogleSignInSuccess?: () => void;
+  onClosedWithResumePending?: () => void;
+}
+
 export class AccountHistoryPanels {
   private openPanel: null | 'history' | 'account' = null;
 
@@ -26,7 +38,7 @@ export class AccountHistoryPanels {
   private readonly navAccount: HTMLButtonElement;
   private readonly navWorkout: HTMLButtonElement;
 
-  constructor() {
+  constructor(private readonly options: AccountHistoryPanelsOptions = {}) {
     this.panelHistory = document.getElementById('panel-history')!;
     this.panelAccount = document.getElementById('panel-account')!;
     this.historyPre = document.getElementById('history-json-raw')!;
@@ -57,15 +69,27 @@ export class AccountHistoryPanels {
   }
 
   close(): void {
+    const resumePending = this.options.getResumePending?.() ?? false;
+
     this.panelHistory.classList.add('hidden');
     this.panelAccount.classList.add('hidden');
+    this.panelAccount.classList.remove('app-panel--overlay-result');
     this.openPanel = null;
     this.setNavActive('workout');
+
+    if (resumePending) {
+      this.options.onClosedWithResumePending?.();
+    }
   }
 
-  /** Show Account panel (e.g. before save if needed). */
-  openAccount(): void {
+  /** @param overlayResult — stack above the workout result screen (z-index). */
+  openAccount(opts?: { overlayResult?: boolean }): void {
     this.panelHistory.classList.add('hidden');
+    if (opts?.overlayResult) {
+      this.panelAccount.classList.add('app-panel--overlay-result');
+    } else {
+      this.panelAccount.classList.remove('app-panel--overlay-result');
+    }
     this.panelAccount.classList.remove('hidden');
     this.openPanel = 'account';
     this.refreshAccountUI();
@@ -74,12 +98,12 @@ export class AccountHistoryPanels {
 
   async openHistory(): Promise<void> {
     this.panelAccount.classList.add('hidden');
+    this.panelAccount.classList.remove('app-panel--overlay-result');
     this.panelHistory.classList.remove('hidden');
     this.openPanel = 'history';
     this.setNavActive('history');
 
     this.historyPre.textContent = '';
-    this.historyHint.textContent = 'Loading…';
 
     if (!isGoogleAuthConfigured()) {
       this.historyHint.textContent =
@@ -87,14 +111,26 @@ export class AccountHistoryPanels {
       return;
     }
 
+    if (!getStoredProfile()) {
+      this.historyHint.textContent = HISTORY_PROMPT_SIGN_IN;
+      return;
+    }
+
+    this.historyHint.textContent = 'Загрузка…';
+
     try {
       const json = await loadHistoryJsonForDisplay();
       this.historyPre.textContent = json;
       this.historyHint.textContent = '';
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Could not load history.';
-      this.historyHint.textContent =
-        msg === 'Not signed in' ? 'Sign in under Account to sync history from Google Drive.' : msg;
+      const msg = e instanceof Error ? e.message : '';
+      if (msg === 'Not signed in') {
+        this.historyHint.textContent = getStoredProfile()
+          ? HISTORY_PROMPT_SESSION
+          : HISTORY_PROMPT_SIGN_IN;
+      } else {
+        this.historyHint.textContent = msg || 'Не удалось загрузить историю.';
+      }
     }
   }
 
@@ -132,6 +168,7 @@ export class AccountHistoryPanels {
       const token = await getValidAccessToken(false);
       await ensureEmptyHistoryIfNeeded(token);
       this.refreshAccountUI();
+      this.options.onGoogleSignInSuccess?.();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Google sign-in failed.');
     } finally {

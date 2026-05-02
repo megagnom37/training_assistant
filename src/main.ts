@@ -56,10 +56,42 @@ const hud = new HUD();
 const controls = new Controls();
 const startScreen = new StartScreen();
 const resultScreen = new ResultScreen();
-const sidePanels = new AccountHistoryPanels();
+
+/** Opened Account from result save while signed out; restore UI after sign-in or panel close. */
+let pendingResumeResultAfterAuth = false;
+
+function endResultAuthChrome(): void {
+  bottomNav.classList.remove('bottom-nav--above-overlay');
+  bottomNav.classList.add('hidden');
+}
+
+const sidePanels = new AccountHistoryPanels({
+  getResumePending: () => pendingResumeResultAfterAuth,
+  onGoogleSignInSuccess: () => {
+    if (!pendingResumeResultAfterAuth) return;
+    sidePanels.close();
+    pendingResumeResultAfterAuth = false;
+    resultScreen.refreshSaveButtonLabels();
+  },
+  onClosedWithResumePending: () => {
+    endResultAuthChrome();
+  },
+});
 
 resultScreen.onSaveWorkout = async () => {
   await appendWorkoutSavedAtNow();
+};
+
+resultScreen.onRequestSignInForSave = () => {
+  pendingResumeResultAfterAuth = true;
+  bottomNav.classList.remove('hidden');
+  bottomNav.classList.add('bottom-nav--above-overlay');
+  sidePanels.openAccount({ overlayResult: true });
+};
+
+resultScreen.onHide = () => {
+  pendingResumeResultAfterAuth = false;
+  bottomNav.classList.remove('bottom-nav--above-overlay');
 };
 
 document.getElementById('nav-workout')!.addEventListener('click', () => {

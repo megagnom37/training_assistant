@@ -1,4 +1,5 @@
 import type { ChallengeResult, ChallengeStatus, PaceSample } from '../challenge-tracker';
+import { getStoredProfile } from '../google/auth';
 
 const STATUS_CONFIG: Record<ChallengeStatus, { icon: string; label: string }> = {
   success:   { icon: '\u{1F3C6}', label: 'Completed' },
@@ -22,7 +23,10 @@ export interface FreeModeResult {
   paceSamples: PaceSample[];
 }
 
-type ResultPayload = ChallengeResult | FreeModeResult;
+export type ResultPayload = ChallengeResult | FreeModeResult;
+
+const SAVE_LABEL_SIGNED_IN = 'SAVE WORKOUT';
+const SAVE_LABEL_NEED_AUTH = 'SIGN IN TO SAVE';
 
 export class ResultScreen {
   private root: HTMLElement;
@@ -64,6 +68,12 @@ export class ResultScreen {
 
   /** Persist workout stub (Google Drive JSON); throws on failure. */
   onSaveWorkout: (() => Promise<void>) | null = null;
+
+  /** User tapped save while signed out — open Account / Google sign-in; result stays underneath. */
+  onRequestSignInForSave: (() => void) | null = null;
+
+  /** Invoked whenever the result layer is hidden (home, back, after save). */
+  onHide: (() => void) | null = null;
 
   constructor() {
     this.root = document.getElementById('result-screen')!;
@@ -127,6 +137,12 @@ export class ResultScreen {
       window.alert('Save is not configured.');
       return;
     }
+
+    if (!getStoredProfile()) {
+      this.onRequestSignInForSave?.();
+      return;
+    }
+
     const buttons = [this.btnSave, this.btnChallengeSave];
     for (const b of buttons) {
       b.disabled = true;
@@ -142,6 +158,18 @@ export class ResultScreen {
         b.disabled = false;
       }
     }
+  }
+
+  /** Update save button captions after returning from Google sign-in (same result still on screen). */
+  refreshSaveButtonLabels(): void {
+    this.updateSaveButtonLabels();
+  }
+
+  private updateSaveButtonLabels(): void {
+    const signedIn = Boolean(getStoredProfile());
+    const label = signedIn ? SAVE_LABEL_SIGNED_IN : SAVE_LABEL_NEED_AUTH;
+    this.btnSave.textContent = label;
+    this.btnChallengeSave.textContent = label;
   }
 
   show(result: ResultPayload): void {
@@ -199,11 +227,13 @@ export class ResultScreen {
       );
     }
 
+    this.updateSaveButtonLabels();
     this.root.classList.remove('hidden');
   }
 
   hide(): void {
     this.root.classList.add('hidden');
+    this.onHide?.();
   }
 
   private renderPaceChart(

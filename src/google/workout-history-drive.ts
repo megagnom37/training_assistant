@@ -1,4 +1,4 @@
-import { getValidAccessToken } from './auth';
+import { getStoredProfile, getValidAccessToken } from './auth';
 
 /** Single JSON file on the user's Drive (created by this app; `drive.file` scope). */
 export const WORKOUT_HISTORY_FILENAME = 'training-assistant-history.json';
@@ -154,6 +154,9 @@ export async function ensureEmptyHistoryIfNeeded(token: string): Promise<void> {
 
 /** Pretty-printed JSON for the History screen. */
 export async function loadHistoryJsonForDisplay(): Promise<string> {
+  if (!getStoredProfile()) {
+    throw new Error('Not signed in');
+  }
   const token = await getValidAccessToken(false);
   const fileId = await ensureWorkoutHistoryFile(token);
   const raw = await fetchWorkoutHistoryRaw(token, fileId);

@@ -921,6 +921,10 @@ html, body {
   border: 1px solid rgba(204, 255, 0, 0.28);
 }
 
+.bottom-nav--above-overlay {
+  z-index: 97;
+}
+
 .bottom-nav-icon {
   font-size: 18px;
   line-height: 1;
@@ -1958,6 +1962,11 @@ html, body {
 
 .app-panel--result-top {
   padding-top: 0;
+}
+
+/* Above workout result screen (z-index 95) when opening Account from “sign in to save”. */
+.app-panel--overlay-result {
+  z-index: 96;
 }
 
 .panel-header {
