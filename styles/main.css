@@ -2134,7 +2134,7 @@ html, body {
 }
 
 .history-cal-month-track {
-  flex: 0 0 auto;
+  flex: 1;
   display: grid;
   column-gap: 3px;
   row-gap: 0;
@@ -2142,10 +2142,9 @@ html, body {
 }
 
 .history-cal-month-cell {
-  width: 12px;
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(161, 161, 170, 0.95);
   text-align: center;
@@ -2185,10 +2184,10 @@ html, body {
 }
 
 .history-cal-columns {
-  flex: 0 1 auto;
+  flex: 1;
   display: flex;
   flex-wrap: nowrap;
-  gap: 3px;
+  gap: 4px;
   justify-content: flex-start;
   min-width: 0;
   overflow-x: auto;
@@ -2198,16 +2197,16 @@ html, body {
 }
 
 .history-cal-column {
-  flex: 0 0 auto;
-  width: 12px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-items: center;
 }
 
 .history-cal-cell {
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
   border-radius: 3px;
 }

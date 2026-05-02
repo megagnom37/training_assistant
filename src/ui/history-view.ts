@@ -96,9 +96,6 @@ function isFullEntry(w: WorkoutHistoryEntry): w is WorkoutHistoryEntryFree | Wor
   return 'mode' in w && (w.mode === 'free' || w.mode === 'challenge');
 }
 
-/** Square size must match `.history-cal-cell` / `.history-cal-column` in CSS. */
-const CAL_CELL_PX = 12;
-
 function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLElement {
   const { rangeStart, rangeEnd } = calendarTwoFullMonthsRange();
   const counts = countWorkoutsByDay(workouts);
@@ -130,7 +127,7 @@ function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLEl
   monthRow.appendChild(monthSpacer);
   const monthTrack = document.createElement('div');
   monthTrack.className = 'history-cal-month-track';
-  monthTrack.style.gridTemplateColumns = `repeat(${numWeeks}, ${CAL_CELL_PX}px)`;
+  monthTrack.style.gridTemplateColumns = `repeat(${numWeeks}, minmax(0, 1fr))`;
 
   for (let wi = 0; wi < numWeeks; wi++) {
     const wm = addDays(gridMonday, wi * 7);
