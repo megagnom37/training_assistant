@@ -1,3 +1,4 @@
+import type { ChallengeStatus } from '../challenge-tracker';
 import { getStoredProfile, getValidAccessToken } from './auth';
 
 /** Single JSON file on the user's Drive (created by this app; `drive.file` scope). */
@@ -7,28 +8,119 @@ const LS_FILE_ID = 'ta_drive_history_file_id';
 
 const EMPTY_LOG: WorkoutHistoryFile = { version: 1, workouts: [] };
 
-export interface WorkoutHistoryEntry {
+/** Older rows contained only a timestamp. */
+export interface WorkoutHistoryEntryLegacy {
   createdAt: string;
 }
+
+export interface WorkoutHistoryEntryFree {
+  createdAt: string;
+  mode: 'free';
+  exerciseName: string;
+  durationSeconds: number;
+  totalReps: number;
+  avgRateRpm: number | null;
+}
+
+export interface WorkoutHistoryEntryChallenge {
+  createdAt: string;
+  mode: 'challenge';
+  exerciseName: string;
+  result: ChallengeStatus;
+  targetTimeSeconds: number;
+  elapsedSeconds: number;
+  targetReps: number;
+  doneReps: number;
+  avgRateRpm: number;
+}
+
+export type WorkoutHistoryEntry =
+  | WorkoutHistoryEntryFree
+  | WorkoutHistoryEntryChallenge
+  | WorkoutHistoryEntryLegacy;
+
+export type WorkoutHistoryNewEntry = WorkoutHistoryEntryFree | WorkoutHistoryEntryChallenge;
 
 export interface WorkoutHistoryFile {
   version: 1;
   workouts: WorkoutHistoryEntry[];
 }
 
-function parseHistory(raw: string): WorkoutHistoryFile {
+function isChallengeStatus(v: unknown): v is ChallengeStatus {
+  return v === 'success' || v === 'failed' || v === 'cancelled';
+}
+
+function normalizeWorkout(w: unknown): WorkoutHistoryEntry | null {
+  if (!w || typeof w !== 'object') return null;
+  const o = w as Record<string, unknown>;
+  if (typeof o.createdAt !== 'string') return null;
+
+  if (o.mode === 'free') {
+    if (typeof o.exerciseName !== 'string') return { createdAt: o.createdAt };
+    const durationSeconds = Number(o.durationSeconds);
+    const totalReps = Number(o.totalReps);
+    let avgRateRpm: number | null = null;
+    if (o.avgRateRpm === null) avgRateRpm = null;
+    else if (typeof o.avgRateRpm === 'number' && Number.isFinite(o.avgRateRpm)) avgRateRpm = o.avgRateRpm;
+    else if (typeof o.avgRateRpm === 'string' && o.avgRateRpm !== '') {
+      const n = Number(o.avgRateRpm);
+      if (Number.isFinite(n)) avgRateRpm = n;
+    }
+    if (!Number.isFinite(durationSeconds) || !Number.isFinite(totalReps)) return { createdAt: o.createdAt };
+    return {
+      createdAt: o.createdAt,
+      mode: 'free',
+      exerciseName: o.exerciseName,
+      durationSeconds: Math.max(0, Math.floor(durationSeconds)),
+      totalReps: Math.max(0, Math.floor(totalReps)),
+      avgRateRpm,
+    };
+  }
+
+  if (o.mode === 'challenge') {
+    if (typeof o.exerciseName !== 'string' || !isChallengeStatus(o.result)) {
+      return { createdAt: o.createdAt };
+    }
+    const targetTimeSeconds = Number(o.targetTimeSeconds);
+    const elapsedSeconds = Number(o.elapsedSeconds);
+    const targetReps = Number(o.targetReps);
+    const doneReps = Number(o.doneReps);
+    const avgRateRpm = Number(o.avgRateRpm);
+    if (
+      !Number.isFinite(targetTimeSeconds) ||
+      !Number.isFinite(elapsedSeconds) ||
+      !Number.isFinite(targetReps) ||
+      !Number.isFinite(doneReps) ||
+      !Number.isFinite(avgRateRpm)
+    ) {
+      return { createdAt: o.createdAt };
+    }
+    return {
+      createdAt: o.createdAt,
+      mode: 'challenge',
+      exerciseName: o.exerciseName,
+      result: o.result,
+      targetTimeSeconds,
+      elapsedSeconds,
+      targetReps: Math.floor(targetReps),
+      doneReps: Math.floor(doneReps),
+      avgRateRpm,
+    };
+  }
+
+  return { createdAt: o.createdAt };
+}
+
+export function parseHistory(raw: string): WorkoutHistoryFile {
   try {
     const data = JSON.parse(raw) as Partial<WorkoutHistoryFile>;
     if (data.version !== 1 || !Array.isArray(data.workouts)) return { ...EMPTY_LOG };
-    return {
-      version: 1,
-      workouts: data.workouts.filter(
-        (w): w is WorkoutHistoryEntry =>
-          typeof w === 'object' &&
-          w !== null &&
-          typeof (w as WorkoutHistoryEntry).createdAt === 'string'
-      ),
-    };
+    const workouts: WorkoutHistoryEntry[] = [];
+    for (const w of data.workouts) {
+      const n = normalizeWorkout(w);
+      if (n) workouts.push(n);
+    }
+    return { version: 1, workouts };
   } catch {
     return { ...EMPTY_LOG };
   }
@@ -152,23 +244,23 @@ export async function ensureEmptyHistoryIfNeeded(token: string): Promise<void> {
   await ensureWorkoutHistoryFile(token);
 }
 
-/** Pretty-printed JSON for the History screen. */
-export async function loadHistoryJsonForDisplay(): Promise<string> {
+/** Parsed workout log for the History screen UI. */
+export async function loadWorkoutHistory(): Promise<WorkoutHistoryFile> {
   if (!getStoredProfile()) {
     throw new Error('Not signed in');
   }
   const token = await getValidAccessToken(false);
   const fileId = await ensureWorkoutHistoryFile(token);
   const raw = await fetchWorkoutHistoryRaw(token, fileId);
-  return JSON.stringify(parseHistory(raw), null, 2);
+  return parseHistory(raw);
 }
 
-/** Append a workout row with only `createdAt` (ISO datetime). */
-export async function appendWorkoutSavedAtNow(): Promise<void> {
+/** Append a full workout row (saved JSON matches expanded UI fields). */
+export async function appendWorkout(entry: WorkoutHistoryNewEntry): Promise<void> {
   const token = await getValidAccessToken(true);
   const fileId = await ensureWorkoutHistoryFile(token);
   const raw = await fetchWorkoutHistoryRaw(token, fileId);
   const data = parseHistory(raw);
-  data.workouts.push({ createdAt: new Date().toISOString() });
+  data.workouts.push(entry);
   await uploadWorkoutHistory(token, fileId, JSON.stringify(data, null, 2));
 }

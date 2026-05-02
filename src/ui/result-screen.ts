@@ -29,6 +29,8 @@ const SAVE_LABEL_SIGNED_IN = 'SAVE WORKOUT';
 const SAVE_LABEL_NEED_AUTH = 'SIGN IN TO SAVE';
 
 export class ResultScreen {
+  private lastPayload: ResultPayload | null = null;
+
   private root: HTMLElement;
 
   private freeRoot: HTMLElement;
@@ -173,6 +175,7 @@ export class ResultScreen {
   }
 
   show(result: ResultPayload): void {
+    this.lastPayload = result;
     const isFree = (result as FreeModeResult).kind === 'free';
     this.freeRoot.classList.toggle('hidden', !isFree);
     this.challengeRoot.classList.toggle('hidden', isFree);
@@ -231,8 +234,14 @@ export class ResultScreen {
     this.root.classList.remove('hidden');
   }
 
+  /** Payload from the last `show()` — cleared on `hide()`; used when saving to Drive. */
+  getPayloadForSave(): ResultPayload | null {
+    return this.lastPayload;
+  }
+
   hide(): void {
     this.root.classList.add('hidden');
+    this.lastPayload = null;
     this.onHide?.();
   }
 

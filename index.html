@@ -197,14 +197,14 @@
 
     <!-- Full-screen panels (above home; bottom nav stays usable) -->
     <div id="panel-history" class="app-panel hidden" aria-hidden="true">
-      <header class="panel-header">
+      <header class="panel-header history-panel-header">
         <button id="btn-panel-history-close" class="exercise-back" type="button" aria-label="Close">&#x2190;</button>
-        <div class="panel-title">History</div>
+        <div class="history-panel-brand">REPS</div>
         <div class="panel-spacer" aria-hidden="true"></div>
       </header>
       <div class="panel-body panel-body-history">
         <p id="history-json-hint" class="panel-hint"></p>
-        <pre id="history-json-raw" class="history-json-raw"></pre>
+        <div id="history-view-root" class="history-view-root hidden"></div>
       </div>
     </div>
 

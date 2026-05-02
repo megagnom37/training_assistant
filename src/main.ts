@@ -11,7 +11,9 @@ import { Controls } from './ui/controls';
 import { StartScreen, type WorkoutConfig } from './ui/start-screen';
 import { ResultScreen } from './ui/result-screen';
 import { computeRollingRpm } from './rolling-rpm';
-import { appendWorkoutSavedAtNow } from './google/workout-history-drive';
+import type { ChallengeResult } from './challenge-tracker';
+import { appendWorkout, type WorkoutHistoryNewEntry } from './google/workout-history-drive';
+import type { ResultPayload } from './ui/result-screen';
 import { AccountHistoryPanels } from './ui/account-history-panels';
 
 let running = false;
@@ -78,8 +80,41 @@ const sidePanels = new AccountHistoryPanels({
   },
 });
 
+function buildHistoryEntry(payload: ResultPayload): WorkoutHistoryNewEntry {
+  const createdAt = new Date().toISOString();
+  if ('kind' in payload && payload.kind === 'free') {
+    return {
+      createdAt,
+      mode: 'free',
+      exerciseName: payload.exerciseName,
+      durationSeconds: Math.max(0, Math.floor(payload.elapsedSeconds)),
+      totalReps: payload.reps,
+      avgRateRpm:
+        payload.averageRpm !== null && Number.isFinite(payload.averageRpm)
+          ? payload.averageRpm
+          : null,
+    };
+  }
+  const cr = payload as ChallengeResult;
+  return {
+    createdAt,
+    mode: 'challenge',
+    exerciseName: (cr.exerciseName ?? '').trim() || 'Workout',
+    result: cr.status,
+    targetTimeSeconds: cr.targetTimeSeconds,
+    elapsedSeconds: cr.elapsedSeconds,
+    targetReps: cr.targetReps,
+    doneReps: cr.actualReps,
+    avgRateRpm: cr.averageTempo,
+  };
+}
+
 resultScreen.onSaveWorkout = async () => {
-  await appendWorkoutSavedAtNow();
+  const payload = resultScreen.getPayloadForSave();
+  if (!payload) {
+    throw new Error('No workout data to save.');
+  }
+  await appendWorkout(buildHistoryEntry(payload));
 };
 
 resultScreen.onRequestSignInForSave = () => {

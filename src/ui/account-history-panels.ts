@@ -6,7 +6,8 @@ import {
   signInWithGoogle,
   signOutGoogle,
 } from '../google/auth';
-import { ensureEmptyHistoryIfNeeded, loadHistoryJsonForDisplay } from '../google/workout-history-drive';
+import { ensureEmptyHistoryIfNeeded, loadWorkoutHistory } from '../google/workout-history-drive';
+import { renderHistoryView } from './history-view';
 
 const HISTORY_PROMPT_SIGN_IN =
   'Авторизуйтесь через Google на вкладке «Аккаунт», чтобы сохранять и просматривать свои тренировки.';
@@ -25,7 +26,7 @@ export class AccountHistoryPanels {
 
   private readonly panelHistory: HTMLElement;
   private readonly panelAccount: HTMLElement;
-  private readonly historyPre: HTMLElement;
+  private readonly historyViewRoot: HTMLElement;
   private readonly historyHint: HTMLElement;
   private readonly accountSignedOut: HTMLElement;
   private readonly accountSignedIn: HTMLElement;
@@ -41,7 +42,7 @@ export class AccountHistoryPanels {
   constructor(private readonly options: AccountHistoryPanelsOptions = {}) {
     this.panelHistory = document.getElementById('panel-history')!;
     this.panelAccount = document.getElementById('panel-account')!;
-    this.historyPre = document.getElementById('history-json-raw')!;
+    this.historyViewRoot = document.getElementById('history-view-root')!;
     this.historyHint = document.getElementById('history-json-hint')!;
     this.accountSignedOut = document.getElementById('account-signed-out')!;
     this.accountSignedIn = document.getElementById('account-signed-in')!;
@@ -103,7 +104,8 @@ export class AccountHistoryPanels {
     this.openPanel = 'history';
     this.setNavActive('history');
 
-    this.historyPre.textContent = '';
+    this.historyViewRoot.classList.add('hidden');
+    this.historyViewRoot.replaceChildren();
 
     if (!isGoogleAuthConfigured()) {
       this.historyHint.textContent =
@@ -119,9 +121,9 @@ export class AccountHistoryPanels {
     this.historyHint.textContent = 'Загрузка…';
 
     try {
-      const json = await loadHistoryJsonForDisplay();
-      this.historyPre.textContent = json;
+      const data = await loadWorkoutHistory();
       this.historyHint.textContent = '';
+      renderHistoryView(this.historyViewRoot, data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
       if (msg === 'Not signed in') {
@@ -131,6 +133,8 @@ export class AccountHistoryPanels {
       } else {
         this.historyHint.textContent = msg || 'Не удалось загрузить историю.';
       }
+      this.historyViewRoot.classList.add('hidden');
+      this.historyViewRoot.replaceChildren();
     }
   }
 
