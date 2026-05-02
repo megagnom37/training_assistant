@@ -11,6 +11,8 @@ import { Controls } from './ui/controls';
 import { StartScreen, type WorkoutConfig } from './ui/start-screen';
 import { ResultScreen } from './ui/result-screen';
 import { computeRollingRpm } from './rolling-rpm';
+import { appendWorkoutSavedAtNow } from './google/workout-history-drive';
+import { AccountHistoryPanels } from './ui/account-history-panels';
 
 let running = false;
 let sessionActive = false;
@@ -54,10 +56,16 @@ const hud = new HUD();
 const controls = new Controls();
 const startScreen = new StartScreen();
 const resultScreen = new ResultScreen();
+const sidePanels = new AccountHistoryPanels();
+
+resultScreen.onSaveWorkout = async () => {
+  await appendWorkoutSavedAtNow();
+};
 
 document.getElementById('nav-workout')!.addEventListener('click', () => {
   // "Workout" returns to home (mode selection) everywhere except active camera.
   if (!cameraContainer.classList.contains('hidden')) return;
+  if (sidePanels.isOpen()) sidePanels.close();
   resultScreen.hide();
   if (startScreenEl.classList.contains('hidden')) {
     void goToStartScreen();
@@ -444,6 +452,7 @@ async function init(): Promise<void> {
 
     loadingScreen.classList.add('hidden');
     bottomNav.classList.remove('hidden');
+    sidePanels.refreshAccountUI();
 
     const cfg = await startScreen.show();
     await launchCamera(cfg);

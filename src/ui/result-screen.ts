@@ -62,6 +62,9 @@ export class ResultScreen {
 
   onBack: (() => void) | null = null;
 
+  /** Persist workout stub (Google Drive JSON); throws on failure. */
+  onSaveWorkout: (() => Promise<void>) | null = null;
+
   constructor() {
     this.root = document.getElementById('result-screen')!;
 
@@ -106,12 +109,7 @@ export class ResultScreen {
       this.hide();
       this.onBack?.();
     });
-    this.btnSave.addEventListener('click', () => {
-      // Mock save: confirm and go home.
-      window.alert('Saved');
-      this.hide();
-      this.onBack?.();
-    });
+    this.btnSave.addEventListener('click', () => void this.handleSaveWorkout());
 
     this.btnChallengeBack.addEventListener('click', () => {
       this.hide();
@@ -121,11 +119,29 @@ export class ResultScreen {
       this.hide();
       this.onBack?.();
     });
-    this.btnChallengeSave.addEventListener('click', () => {
-      window.alert('Saved');
+    this.btnChallengeSave.addEventListener('click', () => void this.handleSaveWorkout());
+  }
+
+  private async handleSaveWorkout(): Promise<void> {
+    if (!this.onSaveWorkout) {
+      window.alert('Save is not configured.');
+      return;
+    }
+    const buttons = [this.btnSave, this.btnChallengeSave];
+    for (const b of buttons) {
+      b.disabled = true;
+    }
+    try {
+      await this.onSaveWorkout();
       this.hide();
       this.onBack?.();
-    });
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Save failed.');
+    } finally {
+      for (const b of buttons) {
+        b.disabled = false;
+      }
+    }
   }
 
   show(result: ResultPayload): void {
