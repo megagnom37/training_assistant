@@ -35,10 +35,15 @@ function startOfMondayWeek(d: Date): Date {
   return x;
 }
 
-/** Previous calendar month’s first day through today (local), inclusive. */
-function calendarRangeEndInclusive(now = new Date()): { rangeStart: Date; rangeEnd: Date } {
-  const rangeEnd = startOfDay(now);
-  const rangeStart = startOfDay(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+/**
+ * Two full calendar months in local time: 1st day of previous month through last day of current month.
+ * The trailing month is always the current month (not clipped to “today”).
+ */
+function calendarTwoFullMonthsRange(now = new Date()): { rangeStart: Date; rangeEnd: Date } {
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const rangeStart = startOfDay(new Date(y, m - 1, 1));
+  const rangeEnd = startOfDay(new Date(y, m + 1, 0));
   return { rangeStart, rangeEnd };
 }
 
@@ -91,8 +96,11 @@ function isFullEntry(w: WorkoutHistoryEntry): w is WorkoutHistoryEntryFree | Wor
   return 'mode' in w && (w.mode === 'free' || w.mode === 'challenge');
 }
 
+/** Square size must match `.history-cal-cell` / `.history-cal-column` in CSS. */
+const CAL_CELL_PX = 12;
+
 function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLElement {
-  const { rangeStart, rangeEnd } = calendarRangeEndInclusive();
+  const { rangeStart, rangeEnd } = calendarTwoFullMonthsRange();
   const counts = countWorkoutsByDay(workouts);
 
   const gridMonday = startOfMondayWeek(rangeStart);
@@ -112,6 +120,9 @@ function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLEl
     <span class="history-calendar-range-badge">2 Months</span>
   `;
 
+  const synced = document.createElement('div');
+  synced.className = 'history-cal-synced';
+
   const monthRow = document.createElement('div');
   monthRow.className = 'history-cal-month-row';
   const monthSpacer = document.createElement('div');
@@ -119,7 +130,7 @@ function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLEl
   monthRow.appendChild(monthSpacer);
   const monthTrack = document.createElement('div');
   monthTrack.className = 'history-cal-month-track';
-  monthTrack.style.gridTemplateColumns = `repeat(${numWeeks}, minmax(0, 1fr))`;
+  monthTrack.style.gridTemplateColumns = `repeat(${numWeeks}, ${CAL_CELL_PX}px)`;
 
   for (let wi = 0; wi < numWeeks; wi++) {
     const wm = addDays(gridMonday, wi * 7);
@@ -138,7 +149,7 @@ function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLEl
 
   const dowCol = document.createElement('div');
   dowCol.className = 'history-cal-dow-col';
-  const positions = ['M', '', 'W', '', 'F', '', ''];
+  const positions = ['M', '', 'W', '', 'F', '', 'S'];
   for (const lab of positions) {
     const s = document.createElement('span');
     s.className = 'history-cal-dow';
@@ -176,6 +187,9 @@ function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLEl
   gridOuter.appendChild(dowCol);
   gridOuter.appendChild(colsWrap);
 
+  synced.appendChild(monthRow);
+  synced.appendChild(gridOuter);
+
   const legend = document.createElement('div');
   legend.className = 'history-cal-legend';
   legend.innerHTML = `
@@ -189,8 +203,7 @@ function buildActivityCalendar(workouts: readonly WorkoutHistoryEntry[]): HTMLEl
   `;
 
   wrap.appendChild(head);
-  wrap.appendChild(monthRow);
-  wrap.appendChild(gridOuter);
+  wrap.appendChild(synced);
   wrap.appendChild(legend);
 
   return wrap;
