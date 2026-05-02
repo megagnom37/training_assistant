@@ -1956,6 +1956,10 @@ html, body {
   overflow: hidden;
 }
 
+.app-panel--result-top {
+  padding-top: 0;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -1988,6 +1992,10 @@ html, body {
   max-width: 440px;
   width: 100%;
   margin: 0 auto;
+}
+
+.panel-body-account {
+  padding-top: 22px;
 }
 
 .panel-body-history {
@@ -2043,66 +2051,125 @@ html, body {
   margin-bottom: 20px;
 }
 
-.panel-btn-google {
+.panel-btn-google-signin {
   appearance: none;
   width: 100%;
   border: none;
-  border-radius: 14px;
-  padding: 16px 18px;
-  background: #fff;
-  color: #1f1f1f;
-  font-weight: 800;
+  border-radius: 16px;
+  min-height: 64px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--camera-accent);
+  color: #121414;
+  font-weight: 950;
   font-size: 15px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.5px;
+  box-shadow: 0 16px 44px rgba(204, 255, 0, 0.2);
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease-out;
 }
 
-.panel-btn-google:active:not(:disabled) {
-  transform: scale(0.99);
+.panel-btn-google-signin-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #fff;
+  padding: 2px;
+  box-sizing: border-box;
 }
 
-.panel-btn-google:disabled {
-  opacity: 0.45;
+.panel-btn-google-signin-icon svg {
+  display: block;
+  width: 20px;
+  height: 20px;
 }
 
-.panel-btn-secondary {
-  appearance: none;
-  margin-top: 28px;
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 14px;
-  padding: 14px 18px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  -webkit-tap-highlight-color: transparent;
+.panel-btn-google-signin-text {
+  line-height: 1.15;
 }
 
-.panel-btn-secondary:active:not(:disabled) {
-  transform: scale(0.99);
+.panel-btn-google-signin:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
-.account-field {
-  margin-bottom: 18px;
+.panel-btn-google-signin:disabled {
+  opacity: 0.42;
+  box-shadow: none;
 }
 
-.account-label {
+.account-google-profile-card {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.account-google-profile-card-head {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.account-google-profile-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
+}
+
+.account-google-profile-card-body {
+  padding: 16px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.account-readonly-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-readonly-label {
   display: block;
   font-size: 10px;
   letter-spacing: 3px;
   font-weight: 800;
   text-transform: uppercase;
   opacity: 0.45;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-.account-value {
-  font-size: 17px;
+.account-readonly-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 16px;
   font-weight: 600;
   word-break: break-word;
+  line-height: 1.35;
+  user-select: text;
+  pointer-events: none;
+}
+
+.account-sign-out-btn {
+  margin-top: 28px;
 }
 
 /* State indicator */
